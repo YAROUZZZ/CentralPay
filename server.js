@@ -23,6 +23,12 @@ const messageRouter = require('./api/message.routes.js');
 app.use('/message', messageRouter);
 
 
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
+
+
 // Error handling middleware
 app.use(errorHandler);
 
