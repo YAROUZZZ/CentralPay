@@ -70,7 +70,7 @@
   <script>
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
-    const error = urlParams.get("error");
+    const error = urlParams.get("error") === "true";  // ✅ تحويل صحيح إلى boolean
     const message = urlParams.get("message");
 
     const bodyContent = !error
@@ -92,7 +92,7 @@
 
      
     </div>`
-      : `<div style="background-color: #991B1B">
+      : `<div style="background-color: #7F1D1D">
       <h2>${message}</h2>
       <svg 
         xmlns="http://www.w3.org/2000/svg" 
