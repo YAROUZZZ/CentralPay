@@ -29,8 +29,30 @@ class MessageService {
         }
     }
 
+    async checkDuplicate(parsedData) {
+        try {
+            const existingMessage = await Message.findOne({
+                amount: parsedData.amount,
+                date: parsedData.date,
+                time: parsedData.time,
+                type: parsedData.type
+            });
+
+            return existingMessage;
+        } catch (error) {
+            throw new Error('Database error while checking for duplicates: ' + error.message);
+        }
+    }
+
     async createMessage(parsedData) {
         try {
+            // Check if message already exists
+            const duplicate = await this.checkDuplicate(parsedData);
+            
+            if (duplicate) {
+                throw new Error('This message already exists. Duplicate entry detected.');
+            }
+
             const message = new Message({
                 amount: parsedData.amount,
                 date: parsedData.date,
@@ -40,7 +62,11 @@ class MessageService {
 
             return await message.save();
         } catch (error) {
-            throw new Error('Database error: ' + error.message);
+            // Handle MongoDB duplicate key error
+            if (error.code === 11000) {
+                throw new Error('Duplicate message: A message with the same amount, date, time, and type already exists.');
+            }
+            throw error;
         }
     }
 }

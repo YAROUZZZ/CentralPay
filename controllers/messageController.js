@@ -12,10 +12,17 @@ class messageController {
 
             res.status(201).json({
                 success: true,
-                data: parsedData,
-                saved: result
+                data: parsedData
             });
         } catch (error) {
+            // Check if it's a duplicate error
+            if (error.message.includes('already exists') || error.message.includes('Duplicate')) {
+                return res.status(409).json({
+                    success: false,
+                    error: error.message,
+                    statusCode: 409
+                });
+            }
             next(error);
         }
     }
