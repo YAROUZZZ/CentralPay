@@ -1,7 +1,5 @@
 // User controller - handles HTTP requests and responses
-const path = require("path");
 const userService = require('../services/userService');
-const emailService = require('../services/emailService');
 const { sendSuccess } = require('../utils/response');
 
 class UserController {
@@ -15,18 +13,11 @@ class UserController {
             // Register user through service
             const result = await userService.register({ name, email, password, role });
 
-            // Send verification email with QR code
-            await emailService.sendVerificationEmail(
-                result.user,
-                result.verificationString,
-                result.qrCode
-            );
-
-            // Return success response
-            return sendSuccess(res, 201, "User registered successfully. Check your email for verification and QR code.", {
+            // Return success response with token and QR code
+            return sendSuccess(res, 201, "User registered successfully. Use the token to verify your account.", {
                 user: result.user,
-                qrCode: result.qrCode,
-                verificationUrl: result.verificationUrl
+                token: result.token,
+                qrCode: result.qrCode
             });
 
         } catch (error) {
@@ -52,29 +43,20 @@ class UserController {
         }
     }
 
-    //Handle email verification
-    
-    async verifyEmail(req, res, next) {
+    /**
+     * Handle account verification (using token in Authorization header)
+     */
+    async verifyAccount(req, res, next) {
         try {
-            const { Id, uniqueString } = req.params;
+            // Get userId from the authenticated request (set by auth middleware)
+            const userId = req.currentUser.userId;
 
-            // Verify email through service
-            const result = await userService.verifyEmail(Id, uniqueString);
+            // Verify account through service
+            const result = await userService.verifyAccount(userId);
 
-            // Send success response with redirect
-            res.redirect(`/user/verified?error=false`);
+            // Return success response
+            return sendSuccess(res, 200, result.message, result.user);
 
-        } catch (error) {
-            // Pass error to middleware but also try to redirect with error message
-            const message = error.message;
-            res.redirect(`/user/verified?error=true&message=${encodeURIComponent(message)}`);
-        }
-    }
-
-  
-    async getVerifiedPage(req, res, next) {
-        try {
-            res.sendFile(path.join(__dirname, "../views/verified.html"));
         } catch (error) {
             next(error);
         }

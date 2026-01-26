@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require("uuid");
 const AppError = require('../utils/appError');
 
 // Import utilities
-const { findUserByEmail, createUser, createUserVerification, findUserVerification, deleteUserVerification, moveUserToRoleTable } = require('../utils/database');
+const { findUserByEmail, createUser, moveUserToRoleTable } = require('../utils/database');
 const { validateEmail, validateName, validatePassword, validateRequiredFields, sanitizeInput, validateRole, getDefaultRole } = require('../utils/validation');
 const { generateUserToken } = require('../utils/jwt');
 const { generateRegistrationQR } = require('../utils/qrcode');
@@ -57,7 +57,7 @@ class UserService {
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(sanitizedData.password, saltRounds);
 
-        // Create user
+        // Create user in UnverifiedUser table
         const userDataForDB = {
             name: sanitizedData.name,
             email: sanitizedData.email,
@@ -68,26 +68,16 @@ class UserService {
 
         const newUser = await createUser(userDataForDB);
 
-        // Create verification record
-        const uniqueString = uuidv4();
-        const hashedUniqueString = await bcrypt.hash(uniqueString, saltRounds);
+        // Generate JWT token for verification (no email verification needed)
+        const verificationToken = generateUserToken(newUser);
 
-        const verificationData = {
-            Id: newUser._id,
-            uniqueString: hashedUniqueString,
-            createdAt: Date.now(),
-            expiresAt: Date.now() + 3600000
-        };
-
-        await createUserVerification(verificationData);
-
-        // Generate QR code
+        // Generate QR code with all necessary data
         const qrCodeData = {
             _id: newUser._id,
             name: newUser.name,
             email: newUser.email,
             role: newUser.role,
-            verificationString: uniqueString
+            verificationToken: verificationToken
         };
 
         const qrCode = await generateRegistrationQR(qrCodeData);
@@ -99,9 +89,8 @@ class UserService {
                 email: newUser.email,
                 role: newUser.role
             },
-            qrCode,
-            verificationString: uniqueString,
-            verificationUrl: `${process.env.BASE_URL || 'http://localhost:5000'}/user/verify/${newUser._id}/${uniqueString}`
+            token: verificationToken,
+            qrCode
         };
     }
 
@@ -119,15 +108,15 @@ class UserService {
             throw AppError.create(missingFields, 400);
         }
 
-        // Find user
+        // Find user - only search in verified tables (not UnverifiedUser)
         const user = await findUserByEmail(sanitizedEmail);
         if (!user) {
             throw AppError.create("Invalid credentials entered!", 401);
         }
 
-        // Check if email is verified
+        // Check if user is verified
         if (!user.verified) {
-            throw AppError.create("Email hasn't been verified yet. Check your inbox", 403);
+            throw AppError.create("Please verify your account first using the token sent during registration", 403);
         }
 
         // Verify password
@@ -151,40 +140,28 @@ class UserService {
         };
     }
 
-    // Verify user email
-    
-    async verifyEmail(userId, uniqueString) {
-       
-        const verification = await findUserVerification(userId);
+    /**
+     * Verify user account using token (no email required)
+     */
+    async verifyAccount(userId) {
+        try {
+            // Move user from UnverifiedUser to appropriate role table
+            const verifiedUser = await moveUserToRoleTable(userId);
 
-        if (!verification) {
-            throw AppError.create("Account record doesn't exist or has been verified already. Please sign up or log in.", 404);
+            return {
+                success: true,
+                message: "Account verified successfully",
+                user: {
+                    id: verifiedUser._id,
+                    name: verifiedUser.name,
+                    email: verifiedUser.email,
+                    role: verifiedUser.role,
+                    verified: verifiedUser.verified
+                }
+            };
+        } catch (error) {
+            throw AppError.create(error.message, 400);
         }
-
-        const { expiresAt, uniqueString: hashedUniqueString } = verification;
-
-        // Check if link has expired
-        if (expiresAt < Date.now()) {
-            await deleteUserVerification(userId);
-            throw AppError.create("Link has expired. Please sign up again", 410);
-        }
-
-        // Verify the unique string
-        const isValidString = await bcrypt.compare(uniqueString, hashedUniqueString);
-        
-        if (!isValidString) {
-            throw AppError.create("Invalid verification details passed. Check your inbox.", 400);
-        }
-
-        // Move user from UnverifiedUser to appropriate role table
-        const moveResult = await moveUserToRoleTable(userId);
-        
-        // Clean up verification record
-        console.log('Deleting verification record...');
-        const deleteResult = await deleteUserVerification(userId);
-        console.log('Delete result:', deleteResult);
-
-        return { success: true, message: "Email verified successfully" };
     }
 }
 

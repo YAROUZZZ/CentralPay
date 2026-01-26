@@ -4,6 +4,7 @@ const router = express.Router();
 // Import controller and middleware
 const userController = require('../controllers/userController');
 const { validateRequestBody, sanitizeBody } = require('../middleware/validation');
+const auth = require('../middleware/auth');
 
 // User registration route
 router.post('/signup',
@@ -12,12 +13,11 @@ router.post('/signup',
     userController.signup
 );
 
-
-// Email verification route
-router.get("/verify/:Id/:uniqueString", userController.verifyEmail);
-
-// Verified page route
-router.get("/verified", userController.getVerifiedPage);
+// Account verification route (requires token from registration)
+router.post("/verify", 
+    auth,
+    userController.verifyAccount
+);
 
 // User authentication route
 router.post('/signin',

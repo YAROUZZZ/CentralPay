@@ -5,7 +5,6 @@ const UnverifiedUser = require('../modules/UnverifiedUser');
 const NormalUser = require('../modules/NormalUser');
 const BusinessUser = require('../modules/BusinessUser');
 const AdminUser = require('../modules/AdminUser');
-const UserVerification = require('../modules/UserVerification');
 
 // Helper function to get the correct model based on role
 const getUserModel = (role = 'normal') => {
@@ -109,48 +108,11 @@ const moveUserToRoleTable = async (userId) => {
     }
 };
 
-const createUserVerification = async (verificationData) => {
-    try {
-        const newVerification = new UserVerification(verificationData);
-        return await newVerification.save();
-    } catch (error) {
-        throw new Error('Database error while creating verification record');
-    }
-};
-
-const findUserVerification = async (userId) => {
-    try {
-        // Validate and convert string userId to ObjectId
-        if (!mongoose.Types.ObjectId.isValid(userId)) {
-            throw new Error('Invalid user ID format');
-        }
-        const objectId = new mongoose.Types.ObjectId(userId);
-        const verifications = await UserVerification.findOne({ Id: objectId });
-        return verifications;
-    } catch (error) {
-        throw new Error('Database error while finding verification record: ' + error.message);
-    }
-};
-
-const deleteUserVerification = async (userId) => {
-    try {
-        if (!mongoose.Types.ObjectId.isValid(userId)) {
-            throw new Error('Invalid user ID format');
-        }
-        const objectId = new mongoose.Types.ObjectId(userId);
-        return await UserVerification.deleteOne({ Id: objectId });
-    } catch (error) {
-        throw new Error('Database error while deleting verification record');
-    }
-};
 
 module.exports = {
     findUserByEmail,
     createUser,
     updateUser,
-    moveUserToRoleTable,
-    createUserVerification,
-    findUserVerification,
-    deleteUserVerification
+    moveUserToRoleTable
 };
 
