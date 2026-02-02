@@ -8,15 +8,15 @@ class UserController {
      */
     async signup(req, res, next) {
         try {
-            const { name, email, password, role } = req.body;
+            const { name, email, password } = req.body;
 
             // Register user through service
-            const result = await userService.register({ name, email, password, role });
+            const result = await userService.register({ name, email, password});
 
             // Return success response with token and QR code
-            return sendSuccess(res, 201, "User registered successfully. Use the token to verify your account.", {
+            return sendSuccess(res, 201, "User registered successfully. Use the OTP sent to verify your account", {
                 user: result.user,
-                token: result.token,
+                //token: result.token,
                 qrCode: result.qrCode
             });
 
@@ -43,16 +43,22 @@ class UserController {
         }
     }
 
-    /**
-     * Handle account verification (using token in Authorization header)
-     */
+    
     async verifyAccount(req, res, next) {
         try {
-            // Get userId from the authenticated request (set by auth middleware)
-            const userId = req.currentUser.userId;
+            const { otp, email } = req.body;
 
-            // Verify account through service
-            const result = await userService.verifyAccount(userId);
+            if (!otp) {
+                return res.status(400).json({ success: false, message: 'OTP is required' });
+            }
+
+            const identifier = req.currentUser?.userId || email;
+            if (!identifier) {
+                return res.status(400).json({ success: false, message: 'Either an auth token or email is required to verify' });
+            }
+
+            // Verify account through service (identifier can be userId or email)
+            const result = await userService.verifyAccount(identifier, otp);
 
             // Return success response
             return sendSuccess(res, 200, result.message, result.user);

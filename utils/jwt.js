@@ -24,7 +24,6 @@ const generateUserToken = (user) => {
     const payload = {
         userId: user._id,
         email: user.email,
-        role: user.role,
         name: user.name
     };
     return generateToken(payload);

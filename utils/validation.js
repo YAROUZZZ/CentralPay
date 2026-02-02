@@ -22,16 +22,10 @@ const sanitizeInput = (input) => {
     return input.trim();
 };
 
-const validateRole = (role) => {
-    const validRoles = ['normal', 'business', 'admin'];
-    return validRoles.includes(role);
-};
-
 module.exports = {
     validateEmail,
     validateName,
     validatePassword,
     validateRequiredFields,
-    sanitizeInput,
-    validateRole
+    sanitizeInput
 };

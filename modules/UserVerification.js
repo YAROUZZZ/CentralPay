@@ -4,11 +4,14 @@ const schema = mongoose.Schema;
 const UserVerificationSchema = new schema({
     Id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
         required: true
     },
-    uniqueString: String,
-    createdAt: Date,
+    // Hashed OTP string
+    otp: String,
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
     expiresAt: Date
 });
 

@@ -1,13 +1,17 @@
 const mongoose = require('mongoose');
 const schema = mongoose.Schema;
 
-const UnverifiedUserSchema = new schema({
+const UserSchema = new schema({
     name: String,
-    email: String,
+    email: {
+        type: String,
+        unique: true,
+        required: true
+    },
     password: String,
     verified: {
         type: Boolean,
-        default: false
+        default: true
     },
     createdAt: {
         type: Date,
@@ -15,6 +19,6 @@ const UnverifiedUserSchema = new schema({
     }
 });
 
-const UnverifiedUser = mongoose.model('UnverifiedUser', UnverifiedUserSchema);
+const User = mongoose.model('User', UserSchema);
 
-module.exports = UnverifiedUser;
+module.exports = User;

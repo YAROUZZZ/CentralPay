@@ -8,10 +8,10 @@ const generateRegistrationQR = async (userData) => {
             type: 'user_registration',
             name: userData.name,
             email: userData.email,
-            role: userData.role,
             timestamp: new Date().toISOString(),
-            // Include verification URL for mobile app
-            verificationUrl: `http://localhost:5000/user/verify/${userData._id}/${userData.verificationString}`
+            // Include verification token and endpoint info for mobile app
+            //verificationToken: userData.verificationToken,
+           // verificationEndpoint: `POST http://localhost:5000/user/verify (Authorization: Bearer <token>, body: { otp: <code> })`
         };
 
         // Generate QR code as data URL (base64 image)
@@ -38,9 +38,9 @@ const generateRegistrationQRText = (userData) => {
         type: 'user_registration',
         name: userData.name,
         email: userData.email,
-        role: userData.role,
         timestamp: new Date().toISOString(),
-        verificationUrl: `http://localhost:5000/user/verify/${userData._id}/${userData.verificationString}`
+        verificationToken: userData.verificationToken,
+       // verificationEndpoint: `POST http://localhost:5000/user/verify (Authorization: Bearer <token>, body: { otp: <code> })`
     };
 
     return JSON.stringify(qrData);

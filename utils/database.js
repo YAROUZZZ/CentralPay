@@ -2,22 +2,9 @@
 
 const mongoose = require('mongoose');
 const UnverifiedUser = require('../modules/UnverifiedUser');
-const NormalUser = require('../modules/NormalUser');
-const BusinessUser = require('../modules/BusinessUser');
-const AdminUser = require('../modules/AdminUser');
+const User = require('../modules/User');
+const UserVerification = require('../modules/UserVerification');
 
-// Helper function to get the correct model based on role
-const getUserModel = (role = 'normal') => {
-    switch(role) {
-        case 'business':
-            return BusinessUser;
-        case 'admin':
-            return AdminUser;
-        case 'normal':
-        default:
-            return NormalUser;
-    }
-};
 
 const findUserByEmail = async (email) => {
     try {
@@ -25,17 +12,9 @@ const findUserByEmail = async (email) => {
         let user = await UnverifiedUser.findOne({ email });
         if (user) return user;
 
-        // Then search in verified user models
-        user = await NormalUser.findOne({ email });
-        if (user) return user;
-
-        user = await BusinessUser.findOne({ email });
-        if (user) return user;
-
-        user = await AdminUser.findOne({ email });
-        if (user) return user;
-
-        return null;
+        // Then search in the verified User collection
+        user = await User.findOne({ email });
+        return user ? user : null;
     } catch (error) {
         throw new Error('Database error while finding user');
     }
@@ -57,23 +36,15 @@ const updateUser = async (userId, updateData) => {
         let result = await UnverifiedUser.updateOne({ _id: userId }, updateData);
         if (result.modifiedCount > 0) return result;
 
-        // Then try to update in verified user models
-        result = await NormalUser.updateOne({ _id: userId }, updateData);
-        if (result.modifiedCount > 0) return result;
-
-        result = await BusinessUser.updateOne({ _id: userId }, updateData);
-        if (result.modifiedCount > 0) return result;
-
-        result = await AdminUser.updateOne({ _id: userId }, updateData);
-        if (result.modifiedCount > 0) return result;
-
+        // Then update in the single User collection
+        result = await User.updateOne({ _id: userId }, updateData);
         return result;
     } catch (error) {
         throw new Error('Database error while updating user');
     }
 };
 
-const moveUserToRoleTable = async (userId) => {
+const moveUserToVerified = async (userId) => {
     try {
         // Find user in UnverifiedUser table
         const unverifiedUser = await UnverifiedUser.findById(userId);
@@ -82,21 +53,16 @@ const moveUserToRoleTable = async (userId) => {
             throw new Error('User not found in unverified records');
         }
 
-        // Get the appropriate role table
-        const RoleModel = getUserModel(unverifiedUser.role);
-
-        // Create user data for role table
+        // Create user data for the single User collection (no role)
         const verifiedUserData = {
             name: unverifiedUser.name,
             email: unverifiedUser.email,
             password: unverifiedUser.password,
-            verified: true,
-            role: unverifiedUser.role
+            verified: true
         };
 
-
-        // Create new user in role table
-        const newVerifiedUser = new RoleModel(verifiedUserData);
+        // Create new user in User table
+        const newVerifiedUser = new User(verifiedUserData);
         const savedUser = await newVerifiedUser.save();
 
         // Delete from UnverifiedUser table
@@ -104,15 +70,52 @@ const moveUserToRoleTable = async (userId) => {
 
         return savedUser;
     } catch (error) {
-        throw new Error('Database error while moving user to role table: ' + error.message);
+        throw new Error('Database error while moving user to user table: ' + error.message);
     }
 };
 
+
+const createUserVerification = async (verificationData) => {
+    try {
+        const newVerification = new UserVerification(verificationData);
+        return await newVerification.save();
+    } catch (error) {
+        throw new Error('Database error while creating verification record');
+    }
+};
+
+const findUserVerification = async (userId) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new Error('Invalid user ID format');
+        }
+        const objectId = new mongoose.Types.ObjectId(userId);
+        const verification = await UserVerification.findOne({ Id: objectId });
+        return verification;
+    } catch (error) {
+        throw new Error('Database error while finding verification record: ' + error.message);
+    }
+};
+
+const deleteUserVerification = async (userId) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new Error('Invalid user ID format');
+        }
+        const objectId = new mongoose.Types.ObjectId(userId);
+        return await UserVerification.deleteOne({ Id: objectId });
+    } catch (error) {
+        throw new Error('Database error while deleting verification record');
+    }
+};
 
 module.exports = {
     findUserByEmail,
     createUser,
     updateUser,
-    moveUserToRoleTable
+    moveUserToVerified,
+    createUserVerification,
+    findUserVerification,
+    deleteUserVerification
 };
 
