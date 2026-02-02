@@ -11,17 +11,23 @@ const createTransporter = () => {
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS
-        }
+        },
+          tls: {
+        rejectUnauthorized: false
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000
     });
 
     // Verify transporter configuration
-    transporter.verify((error, success) => {
+   /* transporter.verify((error, success) => {
         if (error) {
             console.error("Email transporter verification failed:", error);
         } else {
             console.log("Email transporter is ready:", success);
         }
-    });
+    });*/
 
     return transporter;
 };
