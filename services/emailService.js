@@ -1,20 +1,17 @@
 const path = require("path");
-const { transporter } = require('../config/email');
-
+const {Resend} = require("resend");
+//const { transporter } = require('../config/email');
+const resend = new Resend(process.env.API_KEY);
 class EmailService {
-    
+
     //Send verification email with QR code
-     
+
     async sendVerificationEmail(user, otp) {
         try {
             const baseUrl = process.env.BASE_URL || "http://localhost:5000";
             const userId = user._id || user.id;
-         // const verificationUrl = `${baseUrl}/user/verify/${userId}/${verificationString}`;
 
-            // Convert base64 QR code to buffer for attachment
-            //const qrCodeBuffer = Buffer.from(qrCodeDataUrl.split(',')[1], 'base64');
-
-            const mailOptions = {
+            const { data, error } = await resend.emails.send({
                 from: process.env.EMAIL_FROM,
                 to: user.email,
                 subject: "Verify your email",
@@ -46,10 +43,15 @@ class EmailService {
                         contentType: 'image/png'
                     }
                 ]*/
-            };
+            });
 
-            await transporter.sendMail(mailOptions);
+            if (error) {
+                console.error("Resend Error:", error);
+                throw new Error("Failed to send email via API");
+            }
 
+            console.log("Email sent successfully:", data.id);
+            return data;
         } catch (error) {
             console.error('Email verification error:', error);
             throw new Error("Verification email failed");
