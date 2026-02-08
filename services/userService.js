@@ -5,7 +5,7 @@ const AppError = require('../utils/appError');
 
 // Import utilities
 const { findUserByEmail, createUser, createUserVerification, findUserVerification, deleteUserVerification, moveUserToVerified } = require('../utils/database');
-const { validateEmail, validateName, validatePassword, validateRequiredFields, sanitizeInput } = require('../utils/validation');
+const { validateEmail, validateName, validatePassword, validateRequiredFields, sanitizeInput, validateRole } = require('../utils/validation');
 const { generateUserToken } = require('../utils/jwt');
 const { generateRegistrationQR } = require('../utils/qrcode');
 const emailService = require('./emailService');
@@ -15,17 +15,18 @@ class UserService {
      * Register a new user
      */
     async register(userData) {
-        const { name, email, password } = userData;
+        const { name, email, password, role} = userData;
 
         // Sanitize inputs
         const sanitizedData = {
             name: sanitizeInput(name),
             email: sanitizeInput(email),
-            password: sanitizeInput(password)
+            password: sanitizeInput(password),
+            role: sanitizeInput(role)
         };
 
         // Validate required fields
-        const missingFields = validateRequiredFields(sanitizedData, ['name', 'email', 'password']);
+        const missingFields = validateRequiredFields(sanitizedData, ['name', 'email', 'password', 'role']);
         if (missingFields) {
             throw AppError.create(missingFields, 400);
         }
@@ -43,6 +44,10 @@ class UserService {
             throw AppError.create("Password must be at least 8 characters long", 400);
         }
 
+        if (!validateRole(sanitizedData.role)) {
+            throw AppError.create("Role must be one of: Normal, Business", 400);
+        }
+
         // Check if user already exists
         const existingUser = await findUserByEmail(sanitizedData.email);
         if (existingUser) {
@@ -58,6 +63,7 @@ class UserService {
             name: sanitizedData.name,
             email: sanitizedData.email,
             password: hashedPassword,
+           // role: sanitizedData.role,
             verified: false,
         };
 
@@ -92,6 +98,8 @@ class UserService {
             _id: newUser._id,
             name: newUser.name,
             email: newUser.email,
+            role: newUser.role,
+            verified: newUser.verified
           //  verificationToken: verificationToken
         };
 
@@ -102,6 +110,8 @@ class UserService {
                 id: newUser._id,
                 name: newUser.name,
                 email: newUser.email,
+                role: newUser.role,
+                verified: newUser.verified
             },
            // token: verificationToken,
             qrCode
@@ -152,6 +162,7 @@ class UserService {
                 id: user._id,
                 name: user.name,
                 email: user.email,
+                role: user.role,
                 verified: user.verified
             },
             qrCode
@@ -211,6 +222,7 @@ class UserService {
                     id: verifiedUser._id,
                     name: verifiedUser.name,
                     email: verifiedUser.email,
+                    role: verifiedUser.role,
                     verified: verifiedUser.verified
                 }
             };

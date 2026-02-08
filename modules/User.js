@@ -9,6 +9,11 @@ const UserSchema = new schema({
         required: true
     },
     password: String,
+    role: {
+        type: String,
+        enum: ['Business', 'Normal'],
+        default: 'Normal'
+    },
     verified: {
         type: Boolean,
         default: true

@@ -13,6 +13,11 @@ const validatePassword = (password) => {
     return password.length >= 8;
 };
 
+const validateRole = (role) => {
+    const validRoles = ['normal', 'business'];
+    return validRoles.includes(role.toLowerCase());
+}
+
 const validateRequiredFields = (fields, fieldNames) => {
     const missingFields = fieldNames.filter(fieldName => !fields[fieldName] || fields[fieldName].trim() === "");
     return missingFields.length === 0 ? null : `Missing required fields: ${missingFields.join(', ')}`;
@@ -27,5 +32,6 @@ module.exports = {
     validateName,
     validatePassword,
     validateRequiredFields,
+    validateRole,
     sanitizeInput
 };

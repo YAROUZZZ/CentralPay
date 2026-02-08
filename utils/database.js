@@ -58,6 +58,7 @@ const moveUserToVerified = async (userId) => {
             name: unverifiedUser.name,
             email: unverifiedUser.email,
             password: unverifiedUser.password,
+            role: unverifiedUser.role,
             verified: true
         };
 
@@ -118,4 +119,3 @@ module.exports = {
     findUserVerification,
     deleteUserVerification
 };
-
