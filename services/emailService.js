@@ -1,21 +1,31 @@
 const path = require("path");
-const {Resend} = require("resend");
+const axios = require("axios");
+const { name } = require("ejs");
 //const { transporter } = require('../config/email');
-const resend = new Resend(process.env.API_KEY);
+//const resend = new Resend(process.env.API_KEY);
 class EmailService {
 
     //Send verification email with QR code
 
     async sendVerificationEmail(user, otp) {
         try {
-            const baseUrl = process.env.BASE_URL || "http://localhost:5000";
-            const userId = user._id || user.id;
+            //const baseUrl = process.env.BASE_URL || "http://localhost:5000";
+            //const userId = user._id || user.id;
 
-            const { data, error } = await resend.emails.send({
-                from: process.env.EMAIL_FROM,
-                to: user.email,
+            await axios.post(
+                "https://api.brevo.com/v3/smtp/email", {
+                sender: {
+                    name: "Central Pay",
+                    email: process.env.EMAIL_FROM
+                },
+                //from: process.env.EMAIL_FROM,
+                to: [{
+                    email: user.email,
+                    name: user.name
+                }],
+
                 subject: "Verify your email",
-                html: `
+                htmlContent: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                         <h2 style="color: #333;">Welcome ${user.name}!</h2>
                         <p>Thank you for registering. Please verify your email address to complete the signup and login to your account.</p>
@@ -43,15 +53,16 @@ class EmailService {
                         contentType: 'image/png'
                     }
                 ]*/
-            });
+            },
+                {
+                    headers: {
+                        "api-key": process.env.API_KEY,
+                        "Content-Type": "application/json"
+                    }
+                }
+            );
 
-            if (error) {
-                console.error("Resend Error:", error);
-                throw new Error("Failed to send email via API");
-            }
 
-            console.log("Email sent successfully:", data.id);
-            return data;
         } catch (error) {
             console.error('Email verification error:', error);
             throw new Error("Verification email failed");

@@ -1,26 +1,23 @@
-// User controller - handles HTTP requests and responses
+// Normal User controller - handles HTTP requests for normal users
 const userService = require('../services/userService');
 const { sendSuccess } = require('../utils/response');
 const mongoose = require('mongoose');
-const User = require('../modules/User');
-const UnverifiedUser = require('../modules/UnverifiedUser');
+const NormalUser = require('../modules/normalUser');
 const UserVerification = require('../modules/UserVerification');
 
-class UserController {
+class NormalUserController {
     /**
-     * Handle user registration
+     * Handle normal user registration
      */
     async signup(req, res, next) {
         try {
-            const { name, email, password , role} = req.body;
+            const { name, email, password } = req.body;
 
-            // Register user through service
-            const result = await userService.register({ name, email, password, role});
+            // Register user with role = normal
+            const result = await userService.register({ name, email, password, role: 'normal' });
 
-            // Return success response with token and QR code
             return sendSuccess(res, 201, "User registered successfully. Use the OTP sent to verify your account", {
                 user: result.user,
-                //token: result.token,
                 qrCode: result.qrCode
             });
 
@@ -36,10 +33,9 @@ class UserController {
         try {
             const { email, password } = req.body;
 
-            // Authenticate user through service
-            const result = await userService.authenticate({ email, password });
+            // Authenticate user - only searches in normal users
+            const result = await userService.authenticate({ email, password, role: 'normal' });
 
-            // Return success response
             return sendSuccess(res, 200, "Sign in successful", result);
 
         } catch (error) {
@@ -47,7 +43,9 @@ class UserController {
         }
     }
 
-    
+    /**
+     * Verify account with OTP
+     */
     async verifyAccount(req, res, next) {
         try {
             const { otp, email } = req.body;
@@ -61,10 +59,9 @@ class UserController {
                 return res.status(400).json({ success: false, message: 'Either an auth OTP or email is required to verify' });
             }
 
-            // Verify account through service (identifier can be userId or email)
-            const result = await userService.verifyAccount(identifier, otp);
+            // Verify account through service
+            const result = await userService.verifyAccount(identifier, otp, 'normal');
 
-            // Return success response
             return sendSuccess(res, 200, result.message, result.user);
 
         } catch (error) {
@@ -72,7 +69,9 @@ class UserController {
         }
     }
 
-
+    /**
+     * Delete account
+     */
     async deleteAccount(req, res, next) {
         try {
             const { email, id } = req.body;
@@ -86,27 +85,23 @@ class UserController {
                 objectId = new mongoose.Types.ObjectId(id);
             }
 
-            // Delete results
-            let unverifiedResult = { deletedCount: 0 };
-            let verifiedResult = { deletedCount: 0 };
+            let normalResult = { deletedCount: 0 };
             let verificationResult = { deletedCount: 0 };
 
             if (objectId) {
-                unverifiedResult = await UnverifiedUser.deleteOne({ _id: objectId });
-                verifiedResult = await User.deleteOne({ _id: objectId });
+                normalResult = await NormalUser.deleteOne({ _id: objectId });
                 verificationResult = await UserVerification.deleteOne({ Id: objectId });
             } else {
                 const sanitizedEmail = email && String(email).toLowerCase();
-                unverifiedResult = await UnverifiedUser.deleteOne({ email: sanitizedEmail });
-                verifiedResult = await User.deleteOne({ email: sanitizedEmail });
+                normalResult = await NormalUser.deleteOne({ email: sanitizedEmail });
 
-                const found = await UnverifiedUser.findOne({ email: sanitizedEmail }) || await User.findOne({ email: sanitizedEmail });
+                const found = await NormalUser.findOne({ email: sanitizedEmail });
                 if (found && found._id) {
                     verificationResult = await UserVerification.deleteOne({ Id: found._id });
                 }
             }
 
-            const totalDeleted = (unverifiedResult.deletedCount || 0) + (verifiedResult.deletedCount || 0) + (verificationResult.deletedCount || 0);
+            const totalDeleted = (normalResult.deletedCount || 0) + (verificationResult.deletedCount || 0);
 
             if (totalDeleted === 0) {
                 return res.status(404).json({ success: false, message: 'No matching user found to delete' });
@@ -117,8 +112,7 @@ class UserController {
         } catch (error) {
             next(error);
         }
-
     }
 }
 
-module.exports = new UserController();
+module.exports = new NormalUserController();

@@ -1,0 +1,106 @@
+// Business User controller - handles HTTP requests for business users
+const userService = require('../services/userService');
+const { sendSuccess } = require('../utils/response');
+const mongoose = require('mongoose');
+const BusinessUser = require('../modules/businessUser');
+const UserVerification = require('../modules/UserVerification');
+
+class BusinessUserController {
+   
+    async signup(req, res, next) {
+        try {
+            const { name, email, password} = req.body;
+
+            const result = await userService.register({ name, email, password, role: 'business' });
+
+            return sendSuccess(res, 201, "User registered successfully. Use the OTP sent to verify your account", {
+                user: result.user,
+                qrCode: result.qrCode
+            });
+
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async signin(req, res, next) {
+        try {
+            const { email, password } = req.body;
+
+            const result = await userService.authenticate({ email, password, role: 'business' });
+
+            return sendSuccess(res, 200, "Sign in successful", result);
+
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async verifyAccount(req, res, next) {
+        try {
+            const { otp, email } = req.body;
+
+            if (!otp) {
+                return res.status(400).json({ success: false, message: 'OTP is required' });
+            }
+
+            const identifier = req.currentUser?.userId || email;
+            if (!identifier) {
+                return res.status(400).json({ success: false, message: 'Either an auth OTP or email is required to verify' });
+            }
+
+            const result = await userService.verifyAccount(identifier, otp, 'business');
+
+            return sendSuccess(res, 200, result.message, result.user);
+
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async deleteAccount(req, res, next) {
+        try {
+            const { email, id } = req.body;
+
+            if (!email && !id) {
+                return res.status(400).json({ success: false, message: 'Provide either email or id to delete the user' });
+            }
+
+            let objectId = null;
+            if (id && mongoose.Types.ObjectId.isValid(id)) {
+                objectId = new mongoose.Types.ObjectId(id);
+            }
+
+            let businessResult = { deletedCount: 0 };
+            let verificationResult = { deletedCount: 0 };
+
+            if (objectId) {
+                businessResult = await BusinessUser.deleteOne({ _id: objectId });
+                verificationResult = await UserVerification.deleteOne({ Id: objectId });
+            } else {
+                const sanitizedEmail = email && String(email).toLowerCase();
+                businessResult = await BusinessUser.deleteOne({ email: sanitizedEmail });
+
+                const found = await BusinessUser.findOne({ email: sanitizedEmail });
+                if (found && found._id) {
+                    verificationResult = await UserVerification.deleteOne({ Id: found._id });
+                }
+            }
+
+            const totalDeleted = (businessResult.deletedCount || 0) + (verificationResult.deletedCount || 0);
+
+            if (totalDeleted === 0) {
+                return res.status(404).json({ success: false, message: 'No matching user found to delete' });
+            }
+
+            return sendSuccess(res, 200, 'User deleted successfully', { deleted: totalDeleted });
+
+        } catch (error) {
+            next(error);
+        }
+    }
+}
+
+module.exports = new BusinessUserController();
+
+            

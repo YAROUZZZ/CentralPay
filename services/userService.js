@@ -44,30 +44,30 @@ class UserService {
             throw AppError.create("Password must be at least 8 characters long", 400);
         }
 
-        if (!validateRole(sanitizedData.role)) {
-            throw AppError.create("Role must be one of: Normal, Business", 400);
-        }
+      /*       if (!validateRole(sanitizedData.role)) {
+                throw AppError.create("Role must be one of: Normal, Business", 400);
+            } */
 
-        // Check if user already exists
-        const existingUser = await findUserByEmail(sanitizedData.email);
+        // Check if user already exists in this role's collection
+        const existingUser = await findUserByEmail(sanitizedData.email, sanitizedData.role);
         if (existingUser) {
-            throw AppError.create("User already exists", 409);
+            throw AppError.create("User already exists with this role", 409);
         }
 
         // Hash password
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(sanitizedData.password, saltRounds);
 
-        // Create user in UnverifiedUser table
+        // Create user in role-specific collection (unverified by default)
         const userDataForDB = {
             name: sanitizedData.name,
             email: sanitizedData.email,
             password: hashedPassword,
-           // role: sanitizedData.role,
+            role: sanitizedData.role,
             verified: false,
         };
 
-        const newUser = await createUser(userDataForDB);
+        const newUser = await createUser(userDataForDB, sanitizedData.role);
 
         // Generate JWT token for verification (no email verification needed)
         const verificationToken = generateUserToken(newUser);
@@ -119,7 +119,7 @@ class UserService {
     }
 
     
-    async authenticate({ email, password }) {
+    async authenticate({ email, password, role = 'normal' }) {
         // Sanitize inputs
         const sanitizedEmail = sanitizeInput(email);
         const sanitizedPassword = sanitizeInput(password);
@@ -130,8 +130,8 @@ class UserService {
             throw AppError.create(missingFields, 400);
         }
 
-        // Find user - only search in verified tables (not UnverifiedUser)
-        const user = await findUserByEmail(sanitizedEmail);
+        // Find user in specific role collection
+        const user = await findUserByEmail(sanitizedEmail, role);
         if (!user) {
             throw AppError.create("Invalid credentials entered!", 401);
         }
@@ -149,11 +149,11 @@ class UserService {
 
         // Generate JWT token
         const token = generateUserToken(user);
+        
         const qrCodeData = {
             _id: user._id,
             name: user.name,
             email: user.email,
-          //  verificationToken: verificationToken
         };
 
         const qrCode = await generateRegistrationQR(qrCodeData);
@@ -166,25 +166,22 @@ class UserService {
                 verified: user.verified
             },
             qrCode
-            //token
         };
     }
 
-    /**
-     * Verify user account using token (no email required)
-     */
-    async verifyAccount(identifier, otp) {
+    
+    async verifyAccount(identifier, otp, role = 'normal') {
         try {
             // identifier can be userId or email
             let userId = identifier;
 
-            // If identifier is an email, resolve to the unverified user id
+            // If identifier is an email, resolve to the user id in the specific role collection
             if (typeof identifier === 'string' && identifier.includes('@')) {
-                const user = await findUserByEmail(identifier);
+                const user = await findUserByEmail(identifier, role);
                 if (!user) {
                     throw new Error('User not found');
                 }
-                // If user already verified (returned User model), reject
+                // If user already verified, reject
                 if (user.verified) {
                     throw new Error('Account already verified');
                 }
@@ -209,8 +206,8 @@ class UserService {
                 throw new Error("Invalid OTP provided. Please check your email.");
             }
 
-            // Move user from UnverifiedUser to verified User table
-            const verifiedUser = await moveUserToVerified(userId);
+            // Move user from unverified to verified in role-specific table
+            const verifiedUser = await moveUserToVerified(userId, role);
 
             // Clean up verification record
             await deleteUserVerification(userId);

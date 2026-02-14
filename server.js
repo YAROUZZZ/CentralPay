@@ -16,17 +16,19 @@ app.use(express.urlencoded({ extended: true }));
 
 
 
-const userRouter = require('./api/User');
-app.use('/user', userRouter);
+const businessRouter = require('./routes/businessUser.routes.js');
+app.use('/business', businessRouter);
 
-const messageRouter = require('./api/message.routes.js');
+const normalRouter = require('./routes/normalUser.routes.js');
+app.use('/normal', normalRouter);
+
+const messageRouter = require('./routes/message.routes.js');
 app.use('/message', messageRouter);
 
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
-
 
 
 // Error handling middleware

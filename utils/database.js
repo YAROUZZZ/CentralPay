@@ -1,77 +1,79 @@
 // Utility functions for common database operations
 
 const mongoose = require('mongoose');
-const UnverifiedUser = require('../modules/UnverifiedUser');
-const User = require('../modules/User');
+const NormalUser = require('../modules/normalUser');
+const BusinessUser = require('../modules/businessUser');
 const UserVerification = require('../modules/UserVerification');
 
+// Helper to get the correct model based on role
+const getUserModel = (role = 'normal') => {
+    switch(role?.toLowerCase()) {
+        case 'business':
+            return BusinessUser;
+        case 'normal':
+        default:
+            return NormalUser;
+    }
+};
 
-const findUserByEmail = async (email) => {
+const findUserByEmail = async (email, role = null) => {
     try {
-        // Search in unverified users first
-        let user = await UnverifiedUser.findOne({ email });
+        // If role specified, search only in that role's collection
+        if (role) {
+            const Model = getUserModel(role);
+            const user = await Model.findOne({ email });
+            return user ? user : null;
+        }
+
+        // Otherwise search in both collections
+        let user = await NormalUser.findOne({ email });
         if (user) return user;
 
-        // Then search in the verified User collection
-        user = await User.findOne({ email });
+        user = await BusinessUser.findOne({ email });
         return user ? user : null;
     } catch (error) {
         throw new Error('Database error while finding user');
     }
 };
 
-const createUser = async (userData) => {
+const createUser = async (userData, role = 'normal') => {
     try {
-        // All new users go to UnverifiedUser table first
-        const newUser = new UnverifiedUser(userData);
+        const Model = getUserModel(role);
+        const newUser = new Model(userData);
         return await newUser.save();
     } catch (error) {
         throw new Error('Database error while creating user');
     }
 };
 
-const updateUser = async (userId, updateData) => {
+const updateUser = async (userId, updateData, role = 'normal') => {
     try {
-        // Try to update in unverified users first
-        let result = await UnverifiedUser.updateOne({ _id: userId }, updateData);
-        if (result.modifiedCount > 0) return result;
-
-        // Then update in the single User collection
-        result = await User.updateOne({ _id: userId }, updateData);
+        const Model = getUserModel(role);
+        const result = await Model.updateOne({ _id: userId }, updateData);
         return result;
     } catch (error) {
         throw new Error('Database error while updating user');
     }
 };
 
-const moveUserToVerified = async (userId) => {
+const moveUserToVerified = async (userId, role = 'normal') => {
     try {
-        // Find user in UnverifiedUser table
-        const unverifiedUser = await UnverifiedUser.findById(userId);
+        // Find user in the collection
+        const Model = getUserModel(role);
         
-        if (!unverifiedUser) {
-            throw new Error('User not found in unverified records');
+        const user = await Model.findById(userId);
+        if (!user) {
+            throw new Error('User not found');
         }
 
-        // Create user data for the single User collection (no role)
-        const verifiedUserData = {
-            name: unverifiedUser.name,
-            email: unverifiedUser.email,
-            password: unverifiedUser.password,
-            role: unverifiedUser.role,
-            verified: true
-        };
-
-        // Create new user in User table
-        const newVerifiedUser = new User(verifiedUserData);
-        const savedUser = await newVerifiedUser.save();
-
-        // Delete from UnverifiedUser table
-        await UnverifiedUser.deleteOne({ _id: userId });
-
-        return savedUser;
+        // Update verified flag to true
+        const result = await Model.updateOne({ _id: userId }, { verified: true });
+        
+        // Return the updated user
+        const updatedUser = await Model.findById(userId);
+        return updatedUser;
     } catch (error) {
-        throw new Error('Database error while moving user to user table: ' + error.message);
+        throw new Error('Database error while moving user to verified: ' + error.message);
     }
 };
 
@@ -117,5 +119,6 @@ module.exports = {
     moveUserToVerified,
     createUserVerification,
     findUserVerification,
-    deleteUserVerification
+    deleteUserVerification,
+    getUserModel
 };

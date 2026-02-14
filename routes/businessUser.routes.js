@@ -2,13 +2,12 @@ const express = require('express');
 const router = express.Router();
 
 // Import controller and middleware
-const userController = require('../controllers/userController');
+const userController = require('../controllers/businessController');
 const { validateRequestBody, sanitizeBody } = require('../middleware/validation');
-const auth = require('../middleware/auth');
 
 router.post('/signup',
-    sanitizeBody(['name', 'email', 'password', 'role']),
-    validateRequestBody(['name', 'email', 'password', 'role']),
+    sanitizeBody(['name', 'email', 'password']),
+    validateRequestBody(['name', 'email', 'password']),
     userController.signup
 );
 

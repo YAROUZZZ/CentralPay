@@ -1,18 +1,16 @@
 const mongoose = require('mongoose');
 const schema = mongoose.Schema;
 
-const UserSchema = new schema({
+const NormalUserSchema = new schema({
     name: String,
     email: {
         type: String,
-        unique: true,
         required: true
     },
     password: String,
     role: {
         type: String,
-        enum: ['Business', 'Normal'],
-        default: 'Normal'
+        default: 'normal'
     },
     verified: {
         type: Boolean,
@@ -24,6 +22,9 @@ const UserSchema = new schema({
     }
 });
 
-const User = mongoose.model('User', UserSchema);
+// Index: email unique per normal user collection
+NormalUserSchema.index({ email: 1 }, { unique: true });
 
-module.exports = User;
+const NormalUser = mongoose.model('NormalUser', NormalUserSchema);
+
+module.exports = NormalUser;
