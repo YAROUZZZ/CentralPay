@@ -12,7 +12,7 @@ const UserSchema = new schema({
     role: {
         type: String,
         enum: ['business', 'normal'],
-        default: 'Business'
+        default: 'business'
     },
     verified: {
         type: Boolean,

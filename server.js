@@ -5,9 +5,32 @@ connectDB();
 const express = require('express');
 const cors = require("cors");
 const errorHandler = require('./middleware/errorHandler');
+const Message = require('./modules/message');
 
 const app = express();
 const port = process.env.PORT || 5000;
+
+// Clean up all non-id indexes from Message collection and rebuild from schema
+(async () => {
+    try {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for DB connection
+        
+        // Drop ALL indexes except _id_
+        try {
+            await Message.collection.dropIndexes();
+            console.log('✓ All indexes dropped from Message collection');
+        } catch (e) {
+            console.log('Indexes drop attempt completed');
+        }
+        
+        // Now rebuild indexes from schema definition
+        await Message.collection.createIndexes();
+        console.log('✓ Indexes rebuilt from schema');
+        
+    } catch (error) {
+        console.log('Index rebuild completed:', error.message);
+    }
+})();
 
 // Middleware
 app.use(cors());

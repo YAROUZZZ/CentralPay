@@ -3,6 +3,9 @@ const multer = require("multer");
 const axios = require("axios");
 const FormData = require("form-data");
 const fs = require("fs");
+const authenticate = require('../middleware/auth');
+const allowRoles = require('../middleware/allowedTo');
+
 
 const router = express.Router();
 
@@ -11,6 +14,7 @@ const router = express.Router();
 
 
 const path = require("path");
+//const { authenticate } = require("../services/userService");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -26,7 +30,7 @@ const upload = multer({ storage: storage });
 
 
 
-router.post("/receipts", upload.single("file"), async (req, res) => {
+router.post("/billCapture", authenticate, allowRoles(['normal']), upload.single("file"), async (req, res) => {
   try {
 
     if (!req.file) {
