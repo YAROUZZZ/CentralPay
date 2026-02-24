@@ -23,6 +23,7 @@ const verifyToken = (token) => {
 const generateUserToken = (user) => {
     const payload = {
         userId: user._id,
+        role: user.role,
         email: user.email,
         name: user.name
     };

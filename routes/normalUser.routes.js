@@ -21,6 +21,6 @@ router.post('/signin',
     userController.signin
 );
 
-router.delete('/delete', userController.deleteAccount);
+//router.delete('/delete', userController.deleteAccount);
 
 module.exports = router;

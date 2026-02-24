@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 
 // Import controller and middleware
-const userController = require('../controllers/businessController');
+const userController = require('../controllers/userController.js');
 const { validateRequestBody, sanitizeBody } = require('../middleware/validation');
+const authenticate = require('../middleware/auth');
 
 router.post('/signup',
     sanitizeBody(['name', 'email', 'password']),
@@ -21,6 +22,8 @@ router.post('/signin',
     userController.signin
 );
 
-router.delete('/delete', userController.deleteBusinessAccount);
+router.delete('/delete', userController.deleteAccount);
+
+router.patch('/changeRole', authenticate, userController.changeRole);
 
 module.exports = router;

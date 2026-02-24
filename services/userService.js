@@ -1,14 +1,16 @@
-// User service - handles all user-related business logic
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require("uuid");
 const AppError = require('../utils/appError');
 
 // Import utilities
-const { findUserByEmail, createUser, createUserVerification, findUserVerification, deleteUserVerification, moveUserToVerified } = require('../utils/database');
+const { findUserByEmail, createUser, createUserVerification, findUserVerification, deleteUserVerification, moveUserToVerified , deleteAccount} = require('../utils/database');
 const { validateEmail, validateName, validatePassword, validateRequiredFields, sanitizeInput, validateRole } = require('../utils/validation');
 const { generateUserToken } = require('../utils/jwt');
 const { generateRegistrationQR } = require('../utils/qrcode');
 const emailService = require('./emailService');
+const { deleteBusinessAccount } = require('../controllers/businessController');
+const { deleteNormalAccount } = require('../controllers/normalController');
+
 
 class UserService {
     /**
@@ -63,13 +65,13 @@ class UserService {
             name: sanitizedData.name,
             email: sanitizedData.email,
             password: hashedPassword,
-            role: sanitizedData.role,
+            //role: sanitizedData.role,
             verified: false,
         };
 
-        const newUser = await createUser(userDataForDB, sanitizedData.role);
+        const newUser = await createUser(userDataForDB);
 
-        // Generate JWT token for verification (no email verification needed)
+        // Generate JWT token for verification
         const verificationToken = generateUserToken(newUser);
 
         // Generate 6-digit OTP and store hashed version in verification table
@@ -119,7 +121,7 @@ class UserService {
     }
 
     
-    async authenticate({ email, password, role = 'normal' }) {
+    async authenticate({ email, password, role = 'business' }) {
         // Sanitize inputs
         const sanitizedEmail = sanitizeInput(email);
         const sanitizedPassword = sanitizeInput(password);
@@ -138,7 +140,7 @@ class UserService {
 
         // Check if user is verified
         if (!user.verified) {
-            throw AppError.create("Please verify your account first using the token sent during registration", 403);
+            throw AppError.create("Please verify your account first using the OTP sent during registration", 403);
         }
 
         // Verify password
@@ -163,14 +165,15 @@ class UserService {
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                verified: user.verified
+                verified: user.verified,
+                token
             },
             qrCode
         };
     }
 
     
-    async verifyAccount(identifier, otp, role = 'normal') {
+    async verifyAccount(identifier, otp, role = 'business') {
         try {
             // identifier can be userId or email
             let userId = identifier;
@@ -191,12 +194,14 @@ class UserService {
             // Validate OTP record
             const verification = await findUserVerification(userId);
             if (!verification) {
+                await deleteAccount(userId);
                 throw new Error("Invalid or expired OTP. Please request a new one.");
             }
 
             // Check expiry
             if (verification.expiresAt < Date.now()) {
-                await deleteUserVerification(userId);
+                //await deleteUserVerification(userId);
+                await deleteAccount(userId);
                 throw new Error("OTP has expired. Please request a new one.");
             }
 
@@ -227,6 +232,52 @@ class UserService {
             throw AppError.create(error.message, 400);
         }
     }
+
+
+
+
+/* 
+    async deleteUserFromAllCollections(id, email) {
+    try {
+        let query = {};
+        
+        if (id && mongoose.Types.ObjectId.isValid(id)) {
+            query = { _id: new mongoose.Types.ObjectId(id) };
+        } else if (email) {
+            query = { email: String(email).toLowerCase() };
+        } else {
+            throw new Error('Invalid input: id or email is required');
+        }
+
+        const user = await User.findOne(query);
+        const unverifiedUser = await UnverifiedUser.findOne(query);
+        
+        const userId = user?._id || unverifiedUser?._id;
+
+        const [userRes, unverifiedRes, verificationRes] = await Promise.all([
+            User.deleteOne(query),
+            UnverifiedUser.deleteOne(query),
+            userId ? UserVerification.deleteOne({ Id: userId }) : { deletedCount: 0 }
+        ]);
+
+        return (userRes.deletedCount || 0) + (unverifiedRes.deletedCount || 0) + (verificationRes.deletedCount || 0);
+
+    } catch (error) {
+        throw new Error('Database error while deleting account: ' + error.message);
+    }
+}; */
+
+
+
+
+
 }
 
 module.exports = new UserService();
+
+
+
+
+
+
+

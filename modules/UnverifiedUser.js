@@ -7,8 +7,8 @@ const UnverifiedUserSchema = new schema({
     password: String,
     role: {
         type: String,
-        enum: ['Business', 'Normal'],
-        default: 'Normal',
+        enum: ['business', 'normal'],
+        default: 'business',
         required: true
     },
     verified: {

@@ -1,15 +1,15 @@
 const userService = require('../services/userService');
 const { sendSuccess } = require('../utils/response');
+const {deleteAccount, changeUserRole} = require('../utils/database');
 
 
-class NormalUserController {
+class userController {
    
     async signup(req, res, next) {
         try {
             const { name, email, password } = req.body;
 
-            // Register user with role = normal
-            const result = await userService.register({ name, email, password, role: 'normal' });
+            const result = await userService.register({ name, email, password, role: 'business' });
 
             return sendSuccess(res, 201, "User registered successfully. Use the OTP sent to verify your account", {
                 user: result.user,
@@ -26,8 +26,7 @@ class NormalUserController {
         try {
             const { email, password } = req.body;
 
-            // Authenticate user - only searches in normal users
-            const result = await userService.authenticate({ email, password, role: 'normal' });
+            const result = await userService.authenticate({ email, password});
 
             return sendSuccess(res, 200, "Sign in successful", result);
 
@@ -60,7 +59,42 @@ class NormalUserController {
         }
     }
 
+
+
+    async deleteAccount(req, res, next) {
+        try {
+            const { email, id } = req.body;
+            if (!email && !id) {
+                return res.status(400).json({ success: false, message: 'Provide either email or id to delete the user' });
+                }
+
+            const total = await deleteAccount(id, email);
+            if (total === 0) {
+                return res.status(404).json({ success: false, message: 'No matching user found to delete' });
+            }
+
+            return sendSuccess(res, 200, "User account deleted successfully", { deleted: total });
+
+            }catch (error) {
+            next(error);}
+        }
+
+
+    async changeRole(req, res, next) {
+        try {
+            // Extract userId from the authenticated token
+            const userId = req.currentUser?.userId;
+            if (!userId) {
+                return res.status(401).json({ success: false, message: 'User not authenticated' });
+            }
+
+            const result = await changeUserRole(userId);
+            return sendSuccess(res, 200, "User role updated successfully", { user: result });
+        }
+            catch (error) {
+            next(error);
+        }}
   
 }
 
-module.exports = new NormalUserController();
+module.exports = new userController();

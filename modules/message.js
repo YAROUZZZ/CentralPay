@@ -3,18 +3,26 @@ const schema = mongoose.Schema;
 
 const messageSchema = new schema({
     amount: Number,
-    date: String,
-    time: String,
+    date: Date,
     type: String,
+    userRole: {
+        type: String,
+        enum: ['business', 'normal'],
+        required: true
+    },
+    createdBy: {
+        type: schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
     createdAt: {
         type: Date,
         default: Date.now
     }
 });
 
-// Create unique index to prevent duplicates
-// Messages are considered duplicates if they have same amount, date, time, and type
-messageSchema.index({ date: 1, time: 1, createdAt: 1}, { unique: true });
+// Create unique index to prevent duplicates: same amount, date, type, user, AND role
+messageSchema.index({ amount: 1, date: 1, type: 1, createdBy: 1, userRole: 1}, { unique: true });
 
 const message = mongoose.model('Message', messageSchema);
 

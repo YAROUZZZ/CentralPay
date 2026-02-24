@@ -58,7 +58,7 @@ class BusinessUserController {
         }
     }
 
-    async deleteAccount(req, res, next) {
+    async deleteBusinessAccount(req, res, next) {
         try {
             const { email, id } = req.body;
 
