@@ -50,9 +50,9 @@ class userController {
             }
 
             // Verify account through service
-            const result = await userService.verifyAccount(identifier, otp, 'normal');
+            const result = await userService.verifyAccount(identifier, otp, 'business');
 
-            return sendSuccess(res, 200, result.message, result.user);
+            return sendSuccess(res, 200, result.message,{ user: result.user, token: result.token });
 
         } catch (error) {
             next(error);

@@ -6,6 +6,7 @@ const BusinessUser = require('../modules/businessUser');
 const User = require('../modules/User');
 const UnverifiedUser = require('../modules/UnverifiedUser');
 const UserVerification = require('../modules/UserVerification');
+const Message = require('../modules/message');
 const { generateUserToken } = require('./jwt');
 
 // Helper to get the correct model based on role
@@ -192,24 +193,30 @@ const deleteAccount = async (id, email) => {
         let userResult = { deletedCount: 0 };
         let verificationResult = { deletedCount: 0 };
         let unverifiedResult = { deletedCount: 0 };
+        let messagesResult = { deletedCount: 0 };
 
         if (objectId) {
+            // Delete all messages created by this user
+            messagesResult = await Message.deleteMany({ createdBy: objectId });
+            
             userResult = await User.deleteOne({ _id: objectId });
             verificationResult = await UserVerification.deleteOne({ Id: objectId });
             unverifiedResult = await UnverifiedUser.deleteOne({ _id: objectId });
         } else {
             const sanitizedEmail = email && String(email).toLowerCase();
-            userResult = await User.deleteOne({ email: sanitizedEmail });
             
-            unverifiedResult = await UnverifiedUser.deleteOne({ email: sanitizedEmail });
-
-            const found = await User.findOne({ email: sanitizedEmail });
-            if (found && found._id) {
-                verificationResult = await UserVerification.deleteOne({ Id: found._id });
+            // Find user first to get their ID for message deletion
+            const userToDelete = await User.findOne({ email: sanitizedEmail });
+            if (userToDelete && userToDelete._id) {
+                messagesResult = await Message.deleteMany({ createdBy: userToDelete._id });
+                verificationResult = await UserVerification.deleteOne({ Id: userToDelete._id });
             }
+            
+            userResult = await User.deleteOne({ email: sanitizedEmail });
+            unverifiedResult = await UnverifiedUser.deleteOne({ email: sanitizedEmail });
         }
 
-        const totalDeleted = (userResult.deletedCount || 0) + (verificationResult.deletedCount || 0) + (unverifiedResult.deletedCount || 0);
+        const totalDeleted = (userResult.deletedCount || 0) + (verificationResult.deletedCount || 0) + (unverifiedResult.deletedCount || 0) + (messagesResult.deletedCount || 0);
 
         return totalDeleted;
 

@@ -150,12 +150,16 @@ class UserService {
         }
 
         // Generate JWT token
+       // console.log(user);
+        
         const token = generateUserToken(user);
         
         const qrCodeData = {
             _id: user._id,
             name: user.name,
             email: user.email,
+            role: user.role,
+            verified: user.verified
         };
 
         const qrCode = await generateRegistrationQR(qrCodeData);
@@ -166,8 +170,9 @@ class UserService {
                 email: user.email,
                 role: user.role,
                 verified: user.verified,
-                token
+                
             },
+            token,
             qrCode
         };
     }
@@ -217,16 +222,23 @@ class UserService {
             // Clean up verification record
             await deleteUserVerification(userId);
 
+            const user = {
+                id: verifiedUser._id,
+                name: verifiedUser.name,
+                email: verifiedUser.email,
+                role: verifiedUser.role,
+                verified: verifiedUser.verified,
+                //token: generateUserToken(verifiedUser)
+                
+            } 
+            const token = generateUserToken(verifiedUser);
+
+
             return {
                 success: true,
                 message: "Account verified successfully",
-                user: {
-                    id: verifiedUser._id,
-                    name: verifiedUser.name,
-                    email: verifiedUser.email,
-                    role: verifiedUser.role,
-                    verified: verifiedUser.verified
-                }
+                user: user,
+                token
             };
         } catch (error) {
             throw AppError.create(error.message, 400);
