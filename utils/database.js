@@ -225,6 +225,25 @@ const deleteAccount = async (id, email) => {
     }}
 
 
+const findUserById = async (userId) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return null;
+        }
+        
+        // البحث في جدول المستخدمين المتحققين
+        const user = await User.findById(userId);
+        if (user) return user;
+        
+        // البحث في جدول المستخدمين غير المتحققين
+        const unverifiedUser = await UnverifiedUser.findById(userId);
+        return unverifiedUser ? unverifiedUser : null;
+    } catch (error) {
+        throw new Error('Database error while finding user by ID: ' + error.message);
+    }
+};
+
+
 module.exports = {
     findUserByEmail,
     createUser,
@@ -235,7 +254,8 @@ module.exports = {
     deleteUserVerification,
 
     changeUserRole,
-    deleteAccount
+    deleteAccount,
+    findUserById
 };
 
 
