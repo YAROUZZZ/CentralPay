@@ -94,7 +94,27 @@ class userController {
             catch (error) {
             next(error);
         }}
-  
+
+
+    async getCurrentUser(req, res, next) {
+        try {
+            const userId = req.currentUser?.userId;
+            if (!userId) {
+                return res.status(401).json({ success: false, message: 'User not authenticated' });
+            }   
+
+
+            const user = {
+                
+                email: req.currentUser.email,
+                name: req.currentUser.name
+            };
+            //const user = await userService.getUserById(userId);
+            return sendSuccess(res, 200, "Current user retrieved successfully", user);
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 module.exports = new userController();

@@ -231,11 +231,9 @@ const findUserById = async (userId) => {
             return null;
         }
         
-        // البحث في جدول المستخدمين المتحققين
         const user = await User.findById(userId);
         if (user) return user;
         
-        // البحث في جدول المستخدمين غير المتحققين
         const unverifiedUser = await UnverifiedUser.findById(userId);
         return unverifiedUser ? unverifiedUser : null;
     } catch (error) {

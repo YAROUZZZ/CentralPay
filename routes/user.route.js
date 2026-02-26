@@ -26,4 +26,6 @@ router.delete('/delete', userController.deleteAccount);
 
 router.patch('/changeRole', authenticate, userController.changeRole);
 
+router.get('/userData', authenticate, userController.getCurrentUser);
+
 module.exports = router;

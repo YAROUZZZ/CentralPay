@@ -3,7 +3,7 @@ const { v4: uuidv4 } = require("uuid");
 const AppError = require('../utils/appError');
 
 // Import utilities
-const { findUserByEmail, createUser, createUserVerification, findUserVerification, deleteUserVerification, moveUserToVerified , deleteAccount} = require('../utils/database');
+const { findUserByEmail, createUser, createUserVerification, findUserVerification, deleteUserVerification, moveUserToVerified , deleteAccount, findUserById} = require('../utils/database');
 const { validateEmail, validateName, validatePassword, validateRequiredFields, sanitizeInput, validateRole } = require('../utils/validation');
 const { generateUserToken } = require('../utils/jwt');
 const { generateRegistrationQR } = require('../utils/qrcode');
@@ -170,9 +170,9 @@ class UserService {
                 email: user.email,
                 role: user.role,
                 verified: user.verified,
-                
+                token
             },
-            token,
+            
             qrCode
         };
     }
@@ -280,11 +280,15 @@ class UserService {
 }; */
 
 
-
-
-
+async getUserById(userId) {
+    try {
+        const user = await findUserById(userId);
+        return user;
+    } catch (error) {
+        throw error;
+    }
 }
-
+}
 module.exports = new UserService();
 
 
