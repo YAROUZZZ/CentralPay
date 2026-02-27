@@ -29,8 +29,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 
-
-router.post("/billCapture", authenticate, allowRoles(['normal']), upload.single("file"), async (req, res) => {
+//removed allowed to mo2katan
+router.post("/billCapture", authenticate, upload.single("file"), async (req, res) => {
   try {
 
     if (!req.file) {

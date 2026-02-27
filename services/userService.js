@@ -53,7 +53,7 @@ class UserService {
         // Check if user already exists in this role's collection
         const existingUser = await findUserByEmail(sanitizedData.email, sanitizedData.role);
         if (existingUser) {
-            throw AppError.create("User already exists with this role", 409);
+            throw AppError.create("User already exists", 409);
         }
 
         // Hash password
