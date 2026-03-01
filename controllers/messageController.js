@@ -7,7 +7,6 @@ class messageController {
     async extractAndSave(req, res, next) {
         try {
             const { Lastsyncdate, Devicename, Messages } = req.body;
-            const dateinmillis = new Date(Lastsyncdate);
             const userId = req.currentUser.userId;
             const userRole = req.currentUser.role;
 
@@ -24,7 +23,7 @@ class messageController {
                 Messages,
                 userId,
                 userRole,
-                { dateinmillis, Devicename }
+                { Lastsyncdate: Lastsyncdate, Devicename }
             );
 
             return sendSuccess(res, 201, 'Batch processing completed', {

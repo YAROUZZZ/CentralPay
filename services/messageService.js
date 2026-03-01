@@ -31,13 +31,14 @@ class MessageService {
                         continue;
                     }
 
-                    const parsedData = await this.extractMessageData(MessageBody, Date);
+                    const parsedData = await this.extractMessageData(MessageBody, Date, Sender);
                     const savedMessage = await this.saveMessageToDevice(
                         userId,
                         Devicename,
                         parsedData,
                         Sender,
-                        Lastsyncdate
+                        Lastsyncdate,
+                        userRole
                     );
                     
                     results.successful.push({
@@ -73,8 +74,14 @@ class MessageService {
             user.devices.forEach(device => {
                 if (Array.isArray(device.messages)) {
                     allMsgs = allMsgs.concat(device.messages.map(m => ({
-                        ...m.toObject ? m.toObject() : m,
-                        device: device.name
+                        sender: m.sender,
+                        amount: m.amount,
+                        date: m.date,
+                        type: m.type,
+                        createdBy: m.createdBy,
+                        userRole: m.userRole,
+                        device: device.name,
+                        _id: m._id
                     })));
                 }
             });
@@ -107,8 +114,14 @@ class MessageService {
                         const msgDate = new Date(m.date);
                         if (msgDate >= startDate && msgDate < endDate) {
                             monthMsgs.push({
-                                ...m.toObject ? m.toObject() : m,
-                                device: device.name
+                                sender: m.sender,
+                                amount: m.amount,
+                                date: m.date,
+                                type: m.type,
+                                createdBy: m.createdBy,
+                                userRole: m.userRole,
+                                device: device.name,
+                                _id: m._id
                             });
                         }
                     });
@@ -123,7 +136,7 @@ class MessageService {
         }
     }
     
-    async extractMessageData(messageBody, date) {
+    async extractMessageData(messageBody, date, sender) {
         try {
             if (!messageBody || typeof messageBody !== 'string') {
                 throw AppError.create('MessageBody must be a non-empty string', 400);
@@ -150,7 +163,8 @@ class MessageService {
             return {
                 amount,
                 type,
-                date
+                date,
+                sender
             };
         } catch (error) {
             throw error instanceof AppError 
@@ -218,7 +232,7 @@ class MessageService {
         }
     }
 
-    async saveMessageToDevice(userId, deviceName, parsedData, sender, lastSyncDate) {
+    async saveMessageToDevice(userId, deviceName, parsedData, sender, lastSyncDate, userRole) {
         try {
             if (!userId || !deviceName) {
                 throw AppError.create('UserId and Devicename are required', 400);
@@ -232,50 +246,111 @@ class MessageService {
             // Find or create device
             let device = user.devices.find(d => d.name === deviceName);
             
+            // Parse lastSyncDate safely
+            let syncDate = new Date();
+            if (lastSyncDate) {
+                // Try parsing as timestamp (number or string number)
+                const numTimestamp = Number(lastSyncDate);
+                if (!isNaN(numTimestamp) && numTimestamp > 0) {
+                    syncDate = new Date(numTimestamp);
+                } else {
+                    // Try parsing as ISO string
+                    const dateObj = new Date(lastSyncDate);
+                    if (!isNaN(dateObj.getTime())) {
+                        syncDate = dateObj;
+                    }
+                }
+                
+                if (isNaN(syncDate.getTime())) {
+                    console.warn('⚠️ Cannot parse lastSyncDate:', lastSyncDate, 'using current date');
+                    syncDate = new Date();
+                }
+            }
+            
             if (!device) {
                 // Create new device
                 device = {
                     name: deviceName,
-                    lastSyncDate: lastSyncDate ? new Date(lastSyncDate) : new Date(),
+                    lastSyncDate: syncDate,
                     messages: []
                 };
                 user.devices.push(device);
+                console.log('📱 Created new device:', deviceName);
             } else {
                 // Update last sync date
-                device.lastSyncDate = lastSyncDate ? new Date(lastSyncDate) : new Date();
+                device.lastSyncDate = syncDate;
+                console.log('📱 Found existing device:', deviceName);
             }
 
             // Add message to device - ensure proper date handling
+            let parsedDate = new Date();
+            if (parsedData.date) {
+                // Try parsing as timestamp (number or string number)
+                const numTimestamp = Number(parsedData.date);
+                if (!isNaN(numTimestamp) && numTimestamp > 0) {
+                    parsedDate = new Date(numTimestamp);
+                } else {
+                    // Try parsing as ISO string or date string
+                    const dateObj = new Date(parsedData.date);
+                    if (!isNaN(dateObj.getTime())) {
+                        parsedDate = dateObj;
+                    }
+                }
+                
+                if (isNaN(parsedDate.getTime())) {
+                    console.warn('⚠️ Invalid date:', parsedData.date, 'Using current date instead');
+                    parsedDate = new Date();
+                }
+            }
+
             const messageObj = {
                 sender: sender,
                 amount: parsedData.amount,
-                date: parsedData.date ? new Date(parsedData.date) : new Date(),
-                type: parsedData.type
+                date: parsedDate,
+                type: parsedData.type,
+                createdBy: userId,
+                userRole: userRole
             };
+
+            console.log('💾 Message to save:', JSON.stringify(messageObj));
 
             // Guard against legacy or corrupted schema where messages might be a string
             if (!Array.isArray(device.messages)) {
                 device.messages = [];
             }
 
+            console.log('📋 Messages array before push:', device.messages.length);
             device.messages.push(messageObj);
+            console.log('📋 Messages array after push:', device.messages.length);
 
-            // Save user with updated device
-            const updatedUser = await user.save();
+            // Use Mongoose $push operator to ensure subdocument fields are saved
+            const updatedUser = await User.findByIdAndUpdate(
+                userId,
+                {
+                    $push: {
+                        [`devices.${user.devices.indexOf(device)}.messages`]: messageObj
+                    }
+                },
+                { new: true, runValidators: true }
+            );
+            console.log('✅ User saved successfully with $push operator');
 
-            // Return the saved message object with ID
-            const savedDevice = updatedUser.devices.find(d => d.name === deviceName);
-            const savedMessage = savedDevice.messages[savedDevice.messages.length - 1];
-
-            return {
-              //  _id: savedMessage._id,
-                sender: savedMessage.sender,
-                amount: savedMessage.amount,
-                date: savedMessage.date,
-                type: savedMessage.type,
-                createdAt: savedMessage.createdAt
+            // Return the message object we saved (values are valid)
+            const returnObj = {
+                sender: messageObj.sender,
+                amount: messageObj.amount,
+                date: messageObj.date,
+                type: messageObj.type,
+                createdBy: messageObj.createdBy,
+                userRole: messageObj.userRole,
+                createdAt: new Date()
             };
+
+            console.log('💾 Returning saved message:', JSON.stringify(returnObj));
+
+            return returnObj;
         } catch (error) {
+            console.error('❌ Error in saveMessageToDevice:', error);
             throw error instanceof AppError 
                 ? error 
                 : AppError.create('Failed to save message to device: ' + error.message, 500);
@@ -319,18 +394,29 @@ class MessageService {
                 throw AppError.create('Device not found', 404);
             }
 
+            console.log('📱 Device found:', device.name);
+            console.log('📋 Messages from DB:', JSON.stringify(device.messages));
+            console.log('📋 Messages count:', device.messages ? device.messages.length : 0);
+            console.log('📋 First message:', device.messages && device.messages[0] ? JSON.stringify(device.messages[0]) : 'none');
+
             // Ensure messages exists and is an array
             const messages = (device.messages && Array.isArray(device.messages))
                 ? device.messages.map(m => ({
                     sender: m.sender,
                     amount: m.amount,
                     date: m.date,
-                    type: m.type
+                    type: m.type,
+                    createdBy: m.createdBy,
+                    userRole: m.userRole,
+                    _id: m._id
                 }))
                 : [];
 
+            console.log('📤 Messages to return:', JSON.stringify(messages));
+
             return { name: device.name, lastSyncDate: device.lastSyncDate, messages: messages };
         } catch (error) {
+            console.error('❌ Error in getDeviceMessages:', error);
             throw error instanceof AppError 
                 ? error 
                 : AppError.create('Failed to fetch device messages: ' + error.message, 500);

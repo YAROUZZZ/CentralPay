@@ -11,7 +11,7 @@ const deviceSchema = new schema({
         type: Date,
         default: Date.now
     },
-    messages: [{messageSchema}]
+    messages: [messageSchema]
 });
 
 const UserSchema = new schema({
