@@ -268,17 +268,21 @@ class MessageService {
             }
             
             if (!device) {
-                // Create new device
+                // Create new device and save it first
                 device = {
                     name: deviceName,
                     lastSyncDate: syncDate,
                     messages: []
                 };
                 user.devices.push(device);
-                console.log('📱 Created new device:', deviceName);
+                
+                // Save user with the new device to ensure it exists in DB
+                await user.save();
+                console.log('📱 Created and saved new device:', deviceName);
             } else {
-                // Update last sync date
+                // Update last sync date for existing device
                 device.lastSyncDate = syncDate;
+                await user.save();
                 console.log('📱 Found existing device:', deviceName);
             }
 
@@ -323,17 +327,21 @@ class MessageService {
             device.messages.push(messageObj);
             console.log('📋 Messages array after push:', device.messages.length);
 
-            // Use Mongoose $push operator to ensure subdocument fields are saved
+            // Use Mongoose $push operator with arrayFilters to target device by name
             const updatedUser = await User.findByIdAndUpdate(
                 userId,
                 {
                     $push: {
-                        [`devices.${user.devices.indexOf(device)}.messages`]: messageObj
+                        'devices.$[d].messages': messageObj
                     }
                 },
-                { new: true, runValidators: true }
+                { 
+                    new: true,
+                    arrayFilters: [{ 'd.name': deviceName }],
+                    runValidators: true
+                }
             );
-            console.log('✅ User saved successfully with $push operator');
+            console.log('✅ User saved successfully with $push operator using arrayFilters');
 
             // Return the message object we saved (values are valid)
             const returnObj = {

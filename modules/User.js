@@ -31,7 +31,10 @@ const UserSchema = new schema({
         type: Boolean,
         default: false
     },
-    devices: [deviceSchema],
+    devices: {
+        type: [deviceSchema],
+        default: []
+    },
     createdAt: {
         type: Date,
         default: Date.now
