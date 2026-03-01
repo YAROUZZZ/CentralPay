@@ -1,5 +1,18 @@
 const mongoose = require('mongoose');
 const schema = mongoose.Schema;
+const messageSchema = require('./message').schema;
+
+const deviceSchema = new schema({
+    name: {
+        type: String,
+        required: true
+    },
+    lastSyncDate: {
+        type: Date,
+        default: Date.now
+    },
+    messages: [{messageSchema}]
+});
 
 const UserSchema = new schema({
     name: String,
@@ -18,6 +31,7 @@ const UserSchema = new schema({
         type: Boolean,
         default: false
     },
+    devices: [deviceSchema],
     createdAt: {
         type: Date,
         default: Date.now

@@ -288,6 +288,23 @@ async getUserById(userId) {
         throw error;
     }
 }
+
+
+async addDevice(userId, device) {
+    try {
+        
+        const updatedUser = await User.findByIdAndUpdate(userId, { $push: { devices: device } }, 
+    { 
+      new: true,          
+      runValidators: true
+    });
+    if (!updatedUser) {
+      throw new Error('User not found');
+    }
+        return updatedUser;
+    } catch (error) {
+        throw error;
+    }}
 }
 module.exports = new UserService();
 

@@ -6,39 +6,35 @@ class messageController {
 
     async extractAndSave(req, res, next) {
         try {
-            const { messages, messageText , date } = req.body;
+            const { Lastsyncdate, Devicename, Messages } = req.body;
+            const dateinmillis = new Date(Lastsyncdate);
             const userId = req.currentUser.userId;
-            const userRole = req.currentUser.role ;
+            const userRole = req.currentUser.role;
 
-            // both single message and batch (just in case)
-            if (messages && Array.isArray(messages)) {
-                // Batch processing
-                const result = await messageService.processBatchMessages(messages, userId, userRole);
-                //console.log(result.date);
-                
-                return sendSuccess(res, 201, 'Batch processing completed', {
-                    data: result,
-                    summary: {
-                        total: messages.length,
-                        successful: result.successful.length,
-                        failed: result.failed.length
-                    }
-                });
-            } else if (messageText) {
-                // Single message
-                console.log(userRole);
-
-                const parsedData = await messageService.extractMessageData(messageText, date);
-                const saved = await messageService.createMessage(parsedData, userId, userRole);
-               // console.log(parsedData.date);
-                
-                return sendSuccess(res, 201, 'Message parsed and saved successfully', saved);
-            } else {
+            // Validate request
+            if (!Messages || !Array.isArray(Messages) || Messages.length === 0) {
                 throw AppError.create(
-                    'Please provide either "messageText" for single message or "messages" array for batch',
+                    'Please provide "Messages" array with SMS objects containing Sender, Date, and MessageBody',
                     400
                 );
             }
+
+            // Process batch messages
+            const result = await messageService.processBatchMessages(
+                Messages,
+                userId,
+                userRole,
+                { dateinmillis, Devicename }
+            );
+
+            return sendSuccess(res, 201, 'Batch processing completed', {
+                data: result,
+                summary: {
+                    total: Messages.length,
+                    successful: result.successful.length,
+                    failed: result.failed.length
+                }
+            });
         } catch (error) {
             next(error);
         }
@@ -72,6 +68,44 @@ class messageController {
       //  } catch (error) {
         //    next(error);
        // }
+    }
+
+    async getTopAndLeastSenders(req, res, next) {
+        try {
+            const userId = req.currentUser?.userId;
+            const userRole = req.currentUser?.role;
+            if (!userId) throw AppError.create('Unauthorized', 401);
+            
+            const senderStats = await messageService.getTopAndLeastSenders(userId, userRole);
+            return sendSuccess(res, 200, 'Sender statistics fetched', senderStats);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getUserDevices(req, res, next) {
+        try {
+            const userId = req.currentUser?.userId;
+            if (!userId) throw AppError.create('Unauthorized', 401);
+            
+            const devices = await messageService.getUserDevices(userId);
+            return sendSuccess(res, 200, 'User devices fetched', { devices: devices.devices });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getDeviceMessages(req, res, next) {
+        //try {
+            const userId = req.currentUser?.userId;
+            const { deviceName } = req.params;
+            if (!userId) throw AppError.create('Unauthorized', 401);
+            
+            const device = await messageService.getDeviceMessages(userId, deviceName);
+            return sendSuccess(res, 200, 'Device messages fetched', device);
+       // } catch (error) {
+         //   next(error);
+        //}
     }
 
     

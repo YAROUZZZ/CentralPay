@@ -115,6 +115,25 @@ class userController {
             next(error);
         }
     }
+
+
+    async addDevice(req, res, next) {
+        try {
+            const userId = req.currentUser?.userId;
+            if (!userId) {
+                return res.status(401).json({ success: false, message: 'User not authenticated' });
+            }
+            const { device } = req.body;
+            if (!device) {
+                return res.status(400).json({ success: false, message: 'Device name is required' });
+            }
+            
+            const result = await userService.addDevice(userId, device);
+            return sendSuccess(res, 200, "Device added successfully", result);
+        
+        } catch (error) {
+            next(error);
+        }}
 }
 
 module.exports = new userController();

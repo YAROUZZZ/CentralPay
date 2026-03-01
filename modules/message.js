@@ -2,9 +2,11 @@ const mongoose = require('mongoose');
 const schema = mongoose.Schema;
 
 const messageSchema = new schema({
+    sender: String,
     amount: Number,
     date: Date,
     type: String,
+   // category: String,
     userRole: {
         type: String,
         enum: ['business', 'normal'],
