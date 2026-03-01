@@ -148,7 +148,7 @@ class MessageService {
             let type = null;
 
             if (messageBody.includes("إضافة تحويل") || messageBody.includes("إيداع") || messageBody.includes("رد مبلغ")){
-                type = "recieved"
+                type = "received"
             }else if(messageBody.includes("سحب") || messageBody.includes("خصم") || messageBody.includes("تنفيذ تحويل")){
                 type = "sent"
             }
@@ -452,8 +452,13 @@ class MessageService {
                         if (!senderStats[msg.sender]) {
                             senderStats[msg.sender] = { count: 0, totalAmount: 0 };
                         }
+
                         senderStats[msg.sender].count += 1;
-                        senderStats[msg.sender].totalAmount += (msg.amount || 0);
+                        if(msg.type === 'sent') {
+                        senderStats[msg.sender].totalAmount -= (msg.amount || 0);}
+                        else if(msg.type === 'received') {
+                            senderStats[msg.sender].totalAmount += (msg.amount || 0);
+                        }
                     });
                 }
             });
