@@ -35,7 +35,9 @@ class messageController {
                 }
             });
         } catch (error) {
-            next(error);
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Error processing batch messages: ' + error.message, 500);
         }
     }
 
@@ -48,13 +50,15 @@ class messageController {
             const messages = await messageService.getMessagesByUser(userId, userRole, limit);
             return sendSuccess(res, 200, 'User messages fetched', { data: messages });
         } catch (error) {
-            next(error);
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Error fetching recent transactions: ' + error.message, 500);
         }
     }
 
 
     async getMonthlyTransactions(req, res, next) {
-       // try {
+        try {
             const userId = req.currentUser?.userId;
             const userRole = req.currentUser?.role;
             const { month, year } = req.body;
@@ -64,9 +68,11 @@ class messageController {
             }
             const messages = await messageService.getMessagesByUserAndMonth(userId, userRole, parseInt(month), parseInt(year));
             return sendSuccess(res, 200, 'Monthly transactions fetched', { data: messages });
-      //  } catch (error) {
-        //    next(error);
-       // }
+        } catch (error) {
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Error fetching monthly transactions: ' + error.message, 500);
+        }
     }
 
     async getTopAndLeastSenders(req, res, next) {
@@ -78,8 +84,9 @@ class messageController {
             const senderStats = await messageService.getTopAndLeastSenders(userId, userRole);
             return sendSuccess(res, 200, 'Sender statistics fetched', senderStats);
         } catch (error) {
-            next(error);
-        }
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Error fetching sender statistics: ' + error.message, 500);}
     }
 
     async getUserDevices(req, res, next) {
@@ -90,23 +97,40 @@ class messageController {
             const devices = await messageService.getUserDevices(userId);
             return sendSuccess(res, 200, 'User devices fetched', { devices: devices.devices });
         } catch (error) {
-            next(error);
-        }
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Error fetching user devices: ' + error.message, 500);}
     }
 
     async getDeviceMessages(req, res, next) {
-        //try {
+        try {
             const userId = req.currentUser?.userId;
             const { deviceName } = req.params;
             if (!userId) throw AppError.create('Unauthorized', 401);
             
             const device = await messageService.getDeviceMessages(userId, deviceName);
             return sendSuccess(res, 200, 'Device messages fetched', device);
-       // } catch (error) {
-         //   next(error);
-        //}
+        } catch (error) {
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Error fetching device messages: ' + error.message, 500);}
     }
 
+
+    async getFilters(req, res, next) {
+        try {
+            const userId = req.currentUser?.userId;
+            const {device, from, to, sender, amount, type} = req.body;
+            const filterssss = {device, from, to, sender, amount, type};
+            if (!userId) throw AppError.create('Unauthorized', 401);
+            const filters = await messageService.getFilteredMessages(userId, filterssss);
+            return sendSuccess(res, 200, 'User filters fetched', { filters });
+        } catch (error) {
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Error fetching filters: ' + error.message, 500);
+        }
+    }
     
 
 }

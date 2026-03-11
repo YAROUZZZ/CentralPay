@@ -1,6 +1,7 @@
 const Message = require('../modules/message');
 const User = require('../modules/User');
 const AppError = require('../utils/appError');
+const mongoose = require('mongoose');
 
 class MessageService {
     
@@ -57,7 +58,9 @@ class MessageService {
 
             return results;
         } catch (error) {
-            throw AppError.create('Batch processing failed: ' + error.message, 500);
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Batch processing failed: ' + error.message, 500);
         }
     }
 
@@ -81,7 +84,7 @@ class MessageService {
                         createdBy: m.createdBy,
                         userRole: m.userRole,
                         device: device.name,
-                        _id: m._id
+                    //    _id: m._id
                     })));
                 }
             });
@@ -91,7 +94,9 @@ class MessageService {
 
             return allMsgs.slice(0, limit);
         } catch (error) {
-            throw AppError.create('Failed to fetch messages for user: ' + error.message, 500);
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Failed to fetch messages for user: ' + error.message, 500);
         }
     }
 
@@ -121,7 +126,7 @@ class MessageService {
                                 createdBy: m.createdBy,
                                 userRole: m.userRole,
                                 device: device.name,
-                                _id: m._id
+                            //    _id: m._id
                             });
                         }
                     });
@@ -132,7 +137,9 @@ class MessageService {
             return monthMsgs;
 
         } catch (error) {
-            throw AppError.create('Failed to fetch messages for this month: ' + error.message, 500);
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Failed to fetch messages for this month: ' + error.message, 500);
         }
     }
     
@@ -187,7 +194,9 @@ class MessageService {
 
             return existingMessage;
         } catch (error) {
-            throw AppError.create('Database error while checking for duplicates: ' + error.message, 500);
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Database error while checking for duplicates: ' + error.message, 500);
         }
     }
 
@@ -262,7 +271,7 @@ class MessageService {
                 }
                 
                 if (isNaN(syncDate.getTime())) {
-                    console.warn('⚠️ Cannot parse lastSyncDate:', lastSyncDate, 'using current date');
+                  //  console.warn('Cannot parse lastSyncDate:', lastSyncDate, 'using current date');
                     syncDate = new Date();
                 }
             }
@@ -278,12 +287,12 @@ class MessageService {
                 
                 // Save user with the new device to ensure it exists in DB
                 await user.save();
-                console.log('📱 Created and saved new device:', deviceName);
+                //console.log('📱 Created and saved new device:', deviceName);
             } else {
                 // Update last sync date for existing device
                 device.lastSyncDate = syncDate;
                 await user.save();
-                console.log('📱 Found existing device:', deviceName);
+                //console.log('📱 Found existing device:', deviceName);
             }
 
             // Add message to device - ensure proper date handling
@@ -302,7 +311,7 @@ class MessageService {
                 }
                 
                 if (isNaN(parsedDate.getTime())) {
-                    console.warn('⚠️ Invalid date:', parsedData.date, 'Using current date instead');
+             //       console.warn('Invalid date:', parsedData.date, 'Using current date instead');
                     parsedDate = new Date();
                 }
             }
@@ -316,16 +325,16 @@ class MessageService {
                 userRole: userRole
             };
 
-            console.log('💾 Message to save:', JSON.stringify(messageObj));
+           // console.log('Message to save:', JSON.stringify(messageObj));
 
             // Guard against legacy or corrupted schema where messages might be a string
             if (!Array.isArray(device.messages)) {
                 device.messages = [];
             }
 
-            console.log('📋 Messages array before push:', device.messages.length);
+           // console.log('Messages array before push:', device.messages.length);
             device.messages.push(messageObj);
-            console.log('📋 Messages array after push:', device.messages.length);
+            //console.log('Messages array after push:', device.messages.length);
 
             // Use Mongoose $push operator with arrayFilters to target device by name
             const updatedUser = await User.findByIdAndUpdate(
@@ -341,7 +350,7 @@ class MessageService {
                     runValidators: true
                 }
             );
-            console.log('✅ User saved successfully with $push operator using arrayFilters');
+          //  console.log('User saved successfully with $push operator using arrayFilters');
 
             // Return the message object we saved (values are valid)
             const returnObj = {
@@ -354,11 +363,11 @@ class MessageService {
                 createdAt: new Date()
             };
 
-            console.log('💾 Returning saved message:', JSON.stringify(returnObj));
+            //console.log('Returning saved message:', JSON.stringify(returnObj));
 
             return returnObj;
         } catch (error) {
-            console.error('❌ Error in saveMessageToDevice:', error);
+          //  console.error('Error in saveMessageToDevice:', error);
             throw error instanceof AppError 
                 ? error 
                 : AppError.create('Failed to save message to device: ' + error.message, 500);
@@ -402,11 +411,7 @@ class MessageService {
                 throw AppError.create('Device not found', 404);
             }
 
-            console.log('📱 Device found:', device.name);
-            console.log('📋 Messages from DB:', JSON.stringify(device.messages));
-            console.log('📋 Messages count:', device.messages ? device.messages.length : 0);
-            console.log('📋 First message:', device.messages && device.messages[0] ? JSON.stringify(device.messages[0]) : 'none');
-
+           
             // Ensure messages exists and is an array
             const messages = (device.messages && Array.isArray(device.messages))
                 ? device.messages.map(m => ({
@@ -420,11 +425,11 @@ class MessageService {
                 }))
                 : [];
 
-            console.log('📤 Messages to return:', JSON.stringify(messages));
+            //  console.log('Messages to return:', JSON.stringify(messages));
 
             return { name: device.name, lastSyncDate: device.lastSyncDate, messages: messages };
         } catch (error) {
-            console.error('❌ Error in getDeviceMessages:', error);
+          //  console.error('Error in getDeviceMessages:', error);
             throw error instanceof AppError 
                 ? error 
                 : AppError.create('Failed to fetch device messages: ' + error.message, 500);
@@ -485,11 +490,11 @@ class MessageService {
                 percentage: parseFloat(((stat.transactions / totalMessages) * 100).toFixed(2))
             }));
 
-            // Get top 5 senders (most messages)
-            const topUsed = senderDataWithPercentage.slice(0, 5);
+            // Get top 3 senders (most messages)
+            const topUsed = senderDataWithPercentage.slice(0, 3);
 
-            // Get least 5 senders (fewest messages)
-            const leastUsed = senderDataWithPercentage.slice(-5).reverse();
+            // Get least 3 senders (fewest messages)
+            const leastUsed = senderDataWithPercentage.slice(-3).reverse();
 
             // Create usage breakdown object
             const usageBreakdown = {};
@@ -499,9 +504,70 @@ class MessageService {
 
             return { topUsed, leastUsed, usageBreakdown };
         } catch (error) {
-            throw AppError.create('Failed to fetch sender statistics: ' + error.message, 500);
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Failed to fetch sender statistics: ' + error.message, 500);
         }
     }
+
+
+   async getFilteredMessages(userId, filters) {
+    try {
+    const {device, from, to, sender, amount, type} = filters;
+    
+    const pipeline = [
+        { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+        { $unwind: '$devices' }
+    ];
+
+    if (device && device !== 'All devices') {
+        pipeline.push({ $match: { 'devices.name': device } });
+    }
+
+    pipeline.push({ $unwind: '$devices.messages' });
+
+    const messageMatch = {};
+    if (type && type !== 'All') messageMatch['devices.messages.type'] = type;
+
+    if (sender && sender !== 'All')  messageMatch['devices.messages.sender'] = sender;
+
+    if (amount && amount !== 'All') messageMatch['devices.messages.amount'] = { $gte: amountNum };
+
+    if (from || to) {
+        messageMatch['devices.messages.date'] = {};
+        if (from) messageMatch['devices.messages.date'].$gte = new Date(from);
+        if (to) {
+            const toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999);
+            messageMatch['devices.messages.date'].$lte = toDate;
+        }
+    }
+
+    if (Object.keys(messageMatch).length > 0) {
+        pipeline.push({ $match: messageMatch });
+    }
+
+    pipeline.push(
+        {
+            $project: {
+                _id: 0,
+                sender: '$devices.messages.sender',
+                amount: '$devices.messages.amount',
+                date: '$devices.messages.date',
+                type: '$devices.messages.type',
+                device: '$devices.name'
+            }
+        },
+        { $sort: { date: -1 } }
+    );
+
+    return await User.aggregate(pipeline);}
+    catch (error) {
+         throw error instanceof AppError 
+                ? error 
+                : AppError.create('Failed to fetch filtered messages: ' + error.message, 500);}
+}
+
 }
 
 module.exports = new MessageService();

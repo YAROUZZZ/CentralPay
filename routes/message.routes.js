@@ -31,5 +31,8 @@ router.get('/devices/:deviceName/messages', authenticate, (req, res, next) => {
     messageController.getDeviceMessages(req, res).catch(next);
 });
 
+router.get('/filters', authenticate, (req, res, next) => {
+    messageController.getFilters(req, res).catch(next);
+});
 
 module.exports = router;

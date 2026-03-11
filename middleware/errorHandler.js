@@ -26,7 +26,7 @@ const errorHandler = (err, req, res, next) => {
     }
 
     // Default error
-    return sendError(res, 500, 'Internal server error');
+    return sendError(res, 500, 'Internal server error'+ (err.message ? ': ' + err.message : ''));
 };
 
 module.exports = errorHandler;
