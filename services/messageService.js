@@ -408,6 +408,8 @@ class MessageService {
 
             const device = user.devices.find(d => d.name === deviceName);
             if (!device) {
+                console.log(deviceName);
+                
                 throw AppError.create('Device not found', 404);
             }
 
@@ -531,7 +533,7 @@ class MessageService {
 
     if (sender && sender !== 'All')  messageMatch['devices.messages.sender'] = sender;
 
-    if (amount && amount !== 'All') messageMatch['devices.messages.amount'] = { $gte: amountNum };
+    if (amount && amount !== 'All') messageMatch['devices.messages.amount'] = { $gte: amount };
 
     if (from || to) {
         messageMatch['devices.messages.date'] = {};
