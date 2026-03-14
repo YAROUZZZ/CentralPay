@@ -123,8 +123,8 @@ class messageController {
             const {device, from, to, sender, amount, type} = req.body;
             const filterssss = {device, from, to, sender, amount, type};
             if (!userId) throw AppError.create('Unauthorized', 401);
-            const filters = await messageService.getFilteredMessages(userId, filterssss);
-            return sendSuccess(res, 200, 'User filters fetched', { filters });
+            const filters = await messageService.getTransactionsWithFilters(userId, filterssss);
+            return sendSuccess(res, 200, 'User filters fetched', filters );
         } catch (error) {
              throw error instanceof AppError 
                 ? error 

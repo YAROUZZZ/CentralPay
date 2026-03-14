@@ -4,7 +4,7 @@ const AppError = require('../utils/appError');
 const mongoose = require('mongoose');
 
 class MessageService {
-    
+
     async processBatchMessages(messagesArray, userId = null, userRole = null, metadata = {}) {
         try {
             const results = {
@@ -41,7 +41,7 @@ class MessageService {
                         Lastsyncdate,
                         userRole
                     );
-                    
+
                     results.successful.push({
                         index: i,
                         data: parsedData,
@@ -58,8 +58,8 @@ class MessageService {
 
             return results;
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Batch processing failed: ' + error.message, 500);
         }
     }
@@ -84,18 +84,18 @@ class MessageService {
                         createdBy: m.createdBy,
                         userRole: m.userRole,
                         device: device.name,
-                    //    _id: m._id
+                        //    _id: m._id
                     })));
                 }
             });
 
             // sort by date desc
-            allMsgs.sort((a,b) => new Date(b.date) - new Date(a.date));
+            allMsgs.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             return allMsgs.slice(0, limit);
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Failed to fetch messages for user: ' + error.message, 500);
         }
     }
@@ -126,23 +126,23 @@ class MessageService {
                                 createdBy: m.createdBy,
                                 userRole: m.userRole,
                                 device: device.name,
-                            //    _id: m._id
+                                //    _id: m._id
                             });
                         }
                     });
                 }
             });
 
-            monthMsgs.sort((a,b) => new Date(b.date) - new Date(a.date));
+            monthMsgs.sort((a, b) => new Date(b.date) - new Date(a.date));
             return monthMsgs;
 
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Failed to fetch messages for this month: ' + error.message, 500);
         }
     }
-    
+
     async extractMessageData(messageBody, date, sender) {
         try {
             if (!messageBody || typeof messageBody !== 'string') {
@@ -154,9 +154,9 @@ class MessageService {
 
             let type = null;
 
-            if (messageBody.includes("إضافة تحويل") || messageBody.includes("إيداع") || messageBody.includes("رد مبلغ")){
+            if (messageBody.includes("إضافة تحويل") || messageBody.includes("إيداع") || messageBody.includes("رد مبلغ")) {
                 type = "received"
-            }else if(messageBody.includes("سحب") || messageBody.includes("خصم") || messageBody.includes("تنفيذ تحويل")){
+            } else if (messageBody.includes("سحب") || messageBody.includes("خصم") || messageBody.includes("تنفيذ تحويل")) {
                 type = "sent"
             }
 
@@ -174,8 +174,8 @@ class MessageService {
                 sender
             };
         } catch (error) {
-            throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Failed to parse message: ' + error.message, 400);
         }
     }
@@ -194,20 +194,20 @@ class MessageService {
 
             return existingMessage;
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Database error while checking for duplicates: ' + error.message, 500);
         }
     }
 
-    async createMessage(parsedData, sender,userId, userRole) {
+    async createMessage(parsedData, sender, userId, userRole) {
         try {
             // Check if message already exists with same role
             const duplicate = await this.checkDuplicate(parsedData, userId, userRole);
-            
+
             if (duplicate) {
                 console.log(userRole);
-                
+
                 throw AppError.create(
                     'This message already exists for this role. Duplicate entry detected.',
                     409
@@ -230,13 +230,13 @@ class MessageService {
                 console.log(userRole);
 
                 throw AppError.create(
-                
+
                     'Duplicate message: A message with the same amount, date, time, and type already exists',
                     409
                 );
             }
-            throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create(error.message || 'Failed to create message', 500);
         }
     }
@@ -254,7 +254,7 @@ class MessageService {
 
             // Find or create device
             let device = user.devices.find(d => d.name === deviceName);
-            
+
             // Parse lastSyncDate safely
             let syncDate = new Date();
             if (lastSyncDate) {
@@ -269,13 +269,13 @@ class MessageService {
                         syncDate = dateObj;
                     }
                 }
-                
+
                 if (isNaN(syncDate.getTime())) {
-                  //  console.warn('Cannot parse lastSyncDate:', lastSyncDate, 'using current date');
+                    //  console.warn('Cannot parse lastSyncDate:', lastSyncDate, 'using current date');
                     syncDate = new Date();
                 }
             }
-            
+
             if (!device) {
                 // Create new device and save it first
                 device = {
@@ -284,7 +284,7 @@ class MessageService {
                     messages: []
                 };
                 user.devices.push(device);
-                
+
                 // Save user with the new device to ensure it exists in DB
                 await user.save();
                 //console.log('📱 Created and saved new device:', deviceName);
@@ -309,9 +309,9 @@ class MessageService {
                         parsedDate = dateObj;
                     }
                 }
-                
+
                 if (isNaN(parsedDate.getTime())) {
-             //       console.warn('Invalid date:', parsedData.date, 'Using current date instead');
+                    //       console.warn('Invalid date:', parsedData.date, 'Using current date instead');
                     parsedDate = new Date();
                 }
             }
@@ -325,14 +325,14 @@ class MessageService {
                 userRole: userRole
             };
 
-           // console.log('Message to save:', JSON.stringify(messageObj));
+            // console.log('Message to save:', JSON.stringify(messageObj));
 
             // Guard against legacy or corrupted schema where messages might be a string
             if (!Array.isArray(device.messages)) {
                 device.messages = [];
             }
 
-           // console.log('Messages array before push:', device.messages.length);
+            // console.log('Messages array before push:', device.messages.length);
             device.messages.push(messageObj);
             //console.log('Messages array after push:', device.messages.length);
 
@@ -344,13 +344,13 @@ class MessageService {
                         'devices.$[d].messages': messageObj
                     }
                 },
-                { 
+                {
                     new: true,
                     arrayFilters: [{ 'd.name': deviceName }],
                     runValidators: true
                 }
             );
-          //  console.log('User saved successfully with $push operator using arrayFilters');
+            //  console.log('User saved successfully with $push operator using arrayFilters');
 
             // Return the message object we saved (values are valid)
             const returnObj = {
@@ -367,9 +367,9 @@ class MessageService {
 
             return returnObj;
         } catch (error) {
-          //  console.error('Error in saveMessageToDevice:', error);
-            throw error instanceof AppError 
-                ? error 
+            //  console.error('Error in saveMessageToDevice:', error);
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Failed to save message to device: ' + error.message, 500);
         }
     }
@@ -385,12 +385,12 @@ class MessageService {
                 throw AppError.create('User not found', 404);
             }
 
-            return { 
-                devices: user.devices.map(d => ({ name: d.name, lastSyncDate: d.lastSyncDate })), 
+            return {
+                devices: user.devices.map(d => ({ name: d.name, lastSyncDate: d.lastSyncDate })),
             };
         } catch (error) {
-            throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Failed to fetch user devices: ' + error.message, 500);
         }
     }
@@ -409,11 +409,11 @@ class MessageService {
             const device = user.devices.find(d => d.name === deviceName);
             if (!device) {
                 console.log(deviceName);
-                
+
                 throw AppError.create('Device not found', 404);
             }
 
-           
+
             // Ensure messages exists and is an array
             const messages = (device.messages && Array.isArray(device.messages))
                 ? device.messages.map(m => ({
@@ -431,9 +431,9 @@ class MessageService {
 
             return { name: device.name, lastSyncDate: device.lastSyncDate, messages: messages };
         } catch (error) {
-          //  console.error('Error in getDeviceMessages:', error);
-            throw error instanceof AppError 
-                ? error 
+            //  console.error('Error in getDeviceMessages:', error);
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Failed to fetch device messages: ' + error.message, 500);
         }
     }
@@ -452,7 +452,7 @@ class MessageService {
 
             // Aggregate messages from all devices by sender
             const senderStats = {};
-            
+
             user.devices.forEach(device => {
                 if (Array.isArray(device.messages)) {
                     device.messages.forEach(msg => {
@@ -461,9 +461,10 @@ class MessageService {
                         }
 
                         senderStats[msg.sender].count += 1;
-                        if(msg.type === 'sent') {
-                        senderStats[msg.sender].totalAmount -= (msg.amount || 0);}
-                        else if(msg.type === 'received') {
+                        if (msg.type === 'sent') {
+                            senderStats[msg.sender].totalAmount -= (msg.amount || 0);
+                        }
+                        else if (msg.type === 'received') {
                             senderStats[msg.sender].totalAmount += (msg.amount || 0);
                         }
                     });
@@ -506,69 +507,117 @@ class MessageService {
 
             return { topUsed, leastUsed, usageBreakdown };
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Failed to fetch sender statistics: ' + error.message, 500);
         }
     }
 
 
-   async getFilteredMessages(userId, filters) {
-    try {
-    const {device, from, to, sender, amount, type} = filters;
-    
-    const pipeline = [
-        { $match: { _id: new mongoose.Types.ObjectId(userId) } },
-        { $unwind: '$devices' }
-    ];
+    async getFilteredMessages(userId, filters) {
+        try {
+            const { device, from, to, sender, amount, type } = filters;
 
-    if (device && device !== 'All devices') {
-        pipeline.push({ $match: { 'devices.name': device } });
-    }
+            const pipeline = [
+                { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+                { $unwind: '$devices' }
+            ];
 
-    pipeline.push({ $unwind: '$devices.messages' });
+            if (device && device !== 'All devices') {
+                pipeline.push({ $match: { 'devices.name': device } });
+            }
 
-    const messageMatch = {};
-    if (type && type !== 'All') messageMatch['devices.messages.type'] = type;
+            pipeline.push({ $unwind: '$devices.messages' });
 
-    if (sender && sender !== 'All')  messageMatch['devices.messages.sender'] = sender;
+            const messageMatch = {};
+            if (type && type !== 'All') messageMatch['devices.messages.type'] = type;
 
-    if (amount && amount !== 'All') messageMatch['devices.messages.amount'] = { $gte: amount };
+            if (sender && sender !== 'All') messageMatch['devices.messages.sender'] = sender;
 
-    if (from || to) {
-        messageMatch['devices.messages.date'] = {};
-        if (from) messageMatch['devices.messages.date'].$gte = new Date(from);
-        if (to) {
-            const toDate = new Date(to);
-            toDate.setHours(23, 59, 59, 999);
-            messageMatch['devices.messages.date'].$lte = toDate;
+            if (amount && amount !== 'All') messageMatch['devices.messages.amount'] = { $gte: amount };
+
+            if (from || to) {
+                messageMatch['devices.messages.date'] = {};
+                if (from) messageMatch['devices.messages.date'].$gte = new Date(from);
+                if (to) {
+                    const toDate = new Date(to);
+                    toDate.setHours(23, 59, 59, 999);
+                    messageMatch['devices.messages.date'].$lte = toDate;
+                }
+            }
+
+            if (Object.keys(messageMatch).length > 0) {
+                pipeline.push({ $match: messageMatch });
+            }
+
+            pipeline.push(
+                {
+                    $project: {
+                        _id: 0,
+                        sender: '$devices.messages.sender',
+                        amount: '$devices.messages.amount',
+                        date: '$devices.messages.date',
+                        type: '$devices.messages.type',
+                        device: '$devices.name'
+                    }
+                },
+                { $sort: { date: -1 } }
+            );
+
+            return await User.aggregate(pipeline);
+        }
+        catch (error) {
+            throw error instanceof AppError
+                ? error
+                : AppError.create('Failed to fetch filtered messages: ' + error.message, 500);
         }
     }
 
-    if (Object.keys(messageMatch).length > 0) {
-        pipeline.push({ $match: messageMatch });
+
+    async getTransactionsWithFilters(userId, filters = {}) {
+        try {
+            //{device, from, to, sender, amount, type}
+
+            // const user = await User.findById(userId).select('devices.name');
+            // const availableDevices = user ? user.devices.map(d => d.name) : [];
+            //const senders = user ? user.devices.map(d => d.messages).flat().map(m => m.sender) : [];
+
+
+
+            const metadata = await User.aggregate([
+                { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+                { $unwind: '$devices' },
+                {
+                    $facet: {
+                        "devicesList": [
+                            { $group: { _id: null, names: { $addToSet: "$devices.name" } } }
+                        ],
+                        "sendersList": [
+                            { $unwind: "$devices.messages" },
+                            { $group: { _id: null, names: { $addToSet: "$devices.messages.sender" } } }
+                        ]
+                    }
+                }
+            ]);
+
+            const availableDevices = metadata[0]?.devicesList[0]?.names || [];
+            const availableSenders = metadata[0]?.sendersList[0]?.names || [];
+
+
+            const messages = await this.getFilteredMessages(userId, filters);
+
+            return {
+                filters: {
+                    device: availableDevices,
+                    sender: availableSenders,
+                    // types: ['sent', 'received'],
+                },
+                messages: messages
+            };
+        } catch (error) {
+            throw AppError.create('Failed to fetch transactions and filters: ' + error.message, 500);
+        }
     }
-
-    pipeline.push(
-        {
-            $project: {
-                _id: 0,
-                sender: '$devices.messages.sender',
-                amount: '$devices.messages.amount',
-                date: '$devices.messages.date',
-                type: '$devices.messages.type',
-                device: '$devices.name'
-            }
-        },
-        { $sort: { date: -1 } }
-    );
-
-    return await User.aggregate(pipeline);}
-    catch (error) {
-         throw error instanceof AppError 
-                ? error 
-                : AppError.create('Failed to fetch filtered messages: ' + error.message, 500);}
-}
 
 }
 
