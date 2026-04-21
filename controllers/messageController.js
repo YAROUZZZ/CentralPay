@@ -1,6 +1,9 @@
 const messageService = require('../services/messageService');
 const { sendSuccess, sendError } = require('../utils/response');
 const AppError = require('../utils/appError');
+const {validateRequiredFields, sanitizeInput } = require('../utils/validation');
+const { findUserById } = require('../utils/database');
+
 
 class messageController {
 
@@ -56,6 +59,34 @@ class messageController {
         }
     }
 
+    async addManually(req, res, next) {
+        try {
+            const userId = req.currentUser?.userId; 
+            const userRole = req.currentUser?.role;
+            const { sender, amount, date, type } = req.body;
+            if (!userId) throw AppError.create('Unauthorized', 401);
+            SanatizedData ={
+            sender: sanitizeInput(sender),
+            amount: sanitizeInput(amount),
+            date: sanitizeInput(date),
+            type: sanitizeInput(type),
+            userRole,
+            createdBy: findUserById(userId),
+            createdAt: new Date(now())
+            }
+
+            const data = validateRequiredFields(SanatizedData, ['sender', 'amount', 'date', 'type']);
+            
+            const result = await messageService.addMessageManually(
+                data,
+                userId
+            );
+            return sendSuccess(res, 201, 'Message added successfully', { data: result });
+        } catch (error) {
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Error adding message manually: ' + error.message, 500);
+        }}
 
     async getMonthlyTransactions(req, res, next) {
         try {

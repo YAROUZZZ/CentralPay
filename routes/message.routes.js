@@ -10,6 +10,10 @@ router.post('/parse', authenticate, (req, res, next) => {
     messageController.extractAndSave(req, res).catch(next);
 });
 
+router.post('/addManually', authenticate, (req, res, next) => {
+    messageController.addManually(req, res).catch(next);
+});
+
 router.get('/recents', authenticate, (req, res, next) => {
     messageController.getRecentTransactions(req, res).catch(next);
 });

@@ -1,8 +1,8 @@
 // Utility functions for common database operations
 
 const mongoose = require('mongoose');
-const NormalUser = require('../modules/normalUser');
-const BusinessUser = require('../modules/businessUser');
+//const NormalUser = require('../modules/normalUser');
+//const BusinessUser = require('../modules/businessUser');
 const User = require('../modules/User');
 const UnverifiedUser = require('../modules/UnverifiedUser');
 const UserVerification = require('../modules/UserVerification');

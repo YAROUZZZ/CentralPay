@@ -13,7 +13,6 @@ const authenticate = async (req, res, next) => {
 
         const decoded = verifyToken(token);
         
-        // التحقق من أن المستخدم موجود فعلاً في قاعدة البيانات
         const userExists = await findUserById(decoded.userId);
         if (!userExists) {
             throw AppError.create('User no longer exists or has been deleted', 401);

@@ -4,7 +4,7 @@ const AppError = require('../utils/appError');
 
 // Import utilities
 const { findUserByEmail, createUser, createUserVerification, findUserVerification, deleteUserVerification, moveUserToVerified , deleteAccount, findUserById} = require('../utils/database');
-const { validateEmail, validateName, validatePassword, validateRequiredFields, sanitizeInput, validateRole } = require('../utils/validation');
+const { validateEmail, validateName, validatePassword, validateRequiredFields, sanitizeInput } = require('../utils/validation');
 const { generateUserToken } = require('../utils/jwt');
 const { generateRegistrationQR } = require('../utils/qrcode');
 const emailService = require('./emailService');
