@@ -63,10 +63,10 @@ class messageController {
         try {
             const userId = req.currentUser?.userId; 
             const userRole = req.currentUser?.role;
-            const { sender, amount, date, type } = req.body;
+            const { device, amount, type, date } = req.body;
             if (!userId) throw AppError.create('Unauthorized', 401);
             SanatizedData ={
-            sender: sanitizeInput(sender),
+            device: sanitizeInput(device),
             amount: sanitizeInput(amount),
             date: sanitizeInput(date),
             type: sanitizeInput(type),
@@ -75,7 +75,7 @@ class messageController {
             createdAt: new Date(now())
             }
 
-            const data = validateRequiredFields(SanatizedData, ['sender', 'amount', 'date', 'type']);
+            const data = validateRequiredFields(SanatizedData, ['device', 'amount', 'date', 'type']);
             
             const result = await messageService.addMessageManually(
                 data,
@@ -88,7 +88,22 @@ class messageController {
                 : AppError.create('Error adding message manually: ' + error.message, 500);
         }}
 
-    async getMonthlyTransactions(req, res, next) {
+    async addAppManually(req, res, next) {
+        try {
+            const userId = req.currentUser?.userId;
+            const userRole = req.currentUser?.role;
+            const { amount, expense, category, date } = req.body;
+            if (!userId) throw AppError.create('Unauthorized', 401);
+            
+            const result = await messageService.addAppMessageManually(amount, expense, category, date, userId, userRole);
+            return sendSuccess(res, 201, 'App message added successfully', { data: result });
+        } catch (error) {
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Error adding app message manually: ' + error.message, 500);
+        }}
+
+   /*  async getMonthlyTransactions(req, res, next) {
         try {
             const userId = req.currentUser?.userId;
             const userRole = req.currentUser?.role;
@@ -104,7 +119,7 @@ class messageController {
                 ? error 
                 : AppError.create('Error fetching monthly transactions: ' + error.message, 500);
         }
-    }
+    } */
 
     async getTopAndLeastSenders(req, res, next) {
         try {
@@ -163,6 +178,22 @@ class messageController {
         }
     }
     
+
+    async deleteDevice(req, res, next) {
+        try {
+            const userId = req.currentUser?.userId;
+            const { deviceName } = req.body;
+            if (!userId) throw AppError.create('Unauthorized', 401);
+            const result = await messageService.deleteDevice(userId, deviceName);
+            if (!result) {
+                throw AppError.create('Device not found or already deleted', 404);
+            }
+            return sendSuccess(res, 200, 'Device deleted successfully');
+        } catch (error) {
+             throw error instanceof AppError 
+                ? error 
+                : AppError.create('Error deleting device: ' + error.message, 500);
+        }}
 
 }
 module.exports = new messageController();

@@ -24,7 +24,7 @@ const messageSchema = new schema({
 });
 
 // Create unique index to prevent duplicates: same amount, date, type, user, AND role
-messageSchema.index({ amount: 1, date: 1, type: 1, createdBy: 1, userRole: 1}, { unique: true });
+messageSchema.index({ amount: 1, date: 1, type: 1, createdBy: 1, userRole: 1}, { unique: true});
 
 const message = mongoose.model('Message', messageSchema);
 

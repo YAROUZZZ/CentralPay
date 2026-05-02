@@ -18,14 +18,14 @@ const port = process.env.PORT || 5000;
         // Drop ALL indexes except _id_
         try {
             await Message.collection.dropIndexes();
-            console.log('✓ All indexes dropped from Message collection');
+            //console.log('✓ All indexes dropped from Message collection');
         } catch (e) {
             console.log('Indexes drop attempt completed');
         }
         
         // Now rebuild indexes from schema definition
         await Message.collection.createIndexes();
-        console.log('✓ Indexes rebuilt from schema');
+       // console.log('✓ Indexes rebuilt from schema');
         
     } catch (error) {
         console.log('Index rebuild completed:', error.message);

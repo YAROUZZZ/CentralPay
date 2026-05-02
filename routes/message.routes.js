@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const messageController = require('../controllers/messageController');
+const transactionController = require('../controllers/transactionController');
 const authenticate = require('../middleware/auth');
 const allowRoles = require('../middleware/allowedTo');
 
@@ -14,13 +15,12 @@ router.post('/addManually', authenticate, (req, res, next) => {
     messageController.addManually(req, res).catch(next);
 });
 
-router.get('/recents', authenticate, (req, res, next) => {
-    messageController.getRecentTransactions(req, res).catch(next);
+router.post('/app/addManually', authenticate, allowRoles(['normal']), (req, res, next) => {
+    transactionController.addAppManually(req, res).catch(next);
 });
 
-
-router.get('/monthlyTransactions', authenticate, (req, res, next) => {
-    messageController.getMonthlyTransactions(req, res).catch(next);
+router.get('/recents', authenticate, (req, res, next) => {
+    messageController.getRecentTransactions(req, res).catch(next);
 });
 
 router.get('/analytics', authenticate, (req, res, next) => {
@@ -37,6 +37,10 @@ router.get('/devices/:deviceName/messages', authenticate, (req, res, next) => {
 
 router.get('/filters', authenticate, (req, res, next) => {
     messageController.getFilters(req, res).catch(next);
+});
+
+router.delete('/deleteDevice', authenticate, (req, res, next) => {
+    messageController.deleteDevice(req, res).catch(next)
 });
 
 module.exports = router;

@@ -8,8 +8,6 @@ const { validateEmail, validateName, validatePassword, validateRequiredFields, s
 const { generateUserToken } = require('../utils/jwt');
 const { generateRegistrationQR } = require('../utils/qrcode');
 const emailService = require('./emailService');
-//const { deleteBusinessAccount } = require('../controllers/businessController');
-//const { deleteNormalAccount } = require('../controllers/normalController');
 
 
 class UserService {
@@ -65,7 +63,6 @@ class UserService {
             name: sanitizedData.name,
             email: sanitizedData.email,
             password: hashedPassword,
-            //role: sanitizedData.role,
             verified: false,
         };
 

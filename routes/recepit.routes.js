@@ -5,6 +5,7 @@ const FormData = require("form-data");
 const fs = require("fs");
 const authenticate = require('../middleware/auth');
 const allowRoles = require('../middleware/allowedTo');
+const {createTransaction} = require('../services/transactionService');
 
 
 const router = express.Router();
@@ -65,6 +66,12 @@ formData.append(
       success: true,
       extracted_data: response.data.data
     });
+
+    // Create a new transaction with the extracted data
+    const { date, total, category, date_epoch_ms } = response.data.data;
+    const userId = req.currentUser?.userId;
+    const userRole = req.currentUser?.role;
+    await createTransaction(total, true, category, date_epoch_ms, userId, userRole);
 
   } catch (error) {
     console.error(error);

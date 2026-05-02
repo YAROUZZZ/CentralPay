@@ -2,6 +2,9 @@ const Message = require('../modules/message');
 const User = require('../modules/User');
 const AppError = require('../utils/appError');
 const mongoose = require('mongoose');
+const { validateRequiredFields, sanitizeInput } = require('../utils/validation');
+const { deleteDevice } = require('../controllers/messageController');
+
 
 class MessageService {
 
@@ -17,7 +20,7 @@ class MessageService {
             if (!Devicename) {
                 throw AppError.create('Devicename is required in metadata', 400);
             }
-            
+
 
             for (let i = 0; i < messagesArray.length; i++) {
                 try {
@@ -34,7 +37,7 @@ class MessageService {
                     }
 
                     const parsedData = await this.extractMessageData(MessageBody, Date, Sender);
-                    const savedMessage = await this.saveMessageToDevice(
+                    const savedMessage = await this.saveToDevice(
                         userId,
                         Devicename,
                         parsedData,
@@ -85,7 +88,6 @@ class MessageService {
                         createdBy: m.createdBy,
                         userRole: m.userRole,
                         device: device.name,
-                        //    _id: m._id
                     })));
                 }
             });
@@ -101,57 +103,57 @@ class MessageService {
         }
     }
 
-
-    async getMessagesByUserAndMonth(userId, userRole, month, year = new Date().getFullYear()) {
-        try {
-            if (!userId || !month) return [];
-
-            const startDate = new Date(year, month - 1, 1);
-            const endDate = new Date(year, month, 1);
-
-            // include full device subdocuments
-            const user = await User.findById(userId).select('devices');
-            if (!user) return [];
-
-            let monthMsgs = [];
-            user.devices.forEach(device => {
-                if (Array.isArray(device.messages)) {
-                    device.messages.forEach(m => {
-                        const msgDate = new Date(m.date);
-                        if (msgDate >= startDate && msgDate < endDate) {
-                            monthMsgs.push({
-                                sender: m.sender,
-                                amount: m.amount,
-                                date: m.date,
-                                type: m.type,
-                               // createdBy: m.createdBy,
-                               // userRole: m.userRole,
-                                device: device.name,
-                                //    _id: m._id
-                            });
-                        }
-                    });
-                }
-            });
-
-            monthMsgs.sort((a, b) => new Date(b.date) - new Date(a.date));
-            let sentCount = 0;
-            let receivedCount = 0;
-            monthMsgs.forEach(m => {
-                if (m.type === 'sent') {
-                    sentCount += m.amount;
-                }else if (m.type === 'received') {
-                receivedCount += m.amount;}
-            });
-            let total = receivedCount - sentCount;
-            return { messages: monthMsgs, sentCount, receivedCount, total };
-
-        } catch (error) {
-            throw error instanceof AppError
-                ? error
-                : AppError.create('Failed to fetch messages for this month: ' + error.message, 500);
-        }
-    }
+    /* 
+        async getMessagesByUserAndMonth(userId, userRole, month, year = new Date().getFullYear()) {
+            try {
+                if (!userId || !month) return [];
+    
+                const startDate = new Date(year, month - 1, 1);
+                const endDate = new Date(year, month, 1);
+    
+                // include full device subdocuments
+                const user = await User.findById(userId).select('devices');
+                if (!user) return [];
+    
+                let monthMsgs = [];
+                user.devices.forEach(device => {
+                    if (Array.isArray(device.messages)) {
+                        device.messages.forEach(m => {
+                            const msgDate = new Date(m.date);
+                            if (msgDate >= startDate && msgDate < endDate) {
+                                monthMsgs.push({
+                                    sender: m.sender,
+                                    amount: m.amount,
+                                    date: m.date,
+                                    type: m.type,
+                                   // createdBy: m.createdBy,
+                                   // userRole: m.userRole,
+                                    device: device.name,
+                                    //    _id: m._id
+                                });
+                            }
+                        });
+                    }
+                });
+    
+                monthMsgs.sort((a, b) => new Date(b.date) - new Date(a.date));
+                let sentCount = 0;
+                let receivedCount = 0;
+                monthMsgs.forEach(m => {
+                    if (m.type === 'sent') {
+                        sentCount += m.amount;
+                    }else if (m.type === 'received') {
+                    receivedCount += m.amount;}
+                });
+                let total = receivedCount - sentCount;
+                return { messages: monthMsgs, sentCount, receivedCount, total };
+    
+            } catch (error) {
+                throw error instanceof AppError
+                    ? error
+                    : AppError.create('Failed to fetch messages for this month: ' + error.message, 500);
+            }
+        } */
 
     async extractMessageData(messageBody, date, sender) {
         try {
@@ -291,7 +293,76 @@ class MessageService {
         return date;
     }
 
-    async saveMessageToDevice(userId, deviceName, parsedData, sender, lastSyncDate, userRole) {
+    async saveToDevice(userId, deviceName, parsedData, sender, lastSyncDate, userRole) {
+        try {
+            if (!userId || !deviceName) {
+                throw AppError.create('UserId and Devicename are required', 400);
+            }
+
+            const user = await User.findById(userId);
+            if (!user) {
+                throw AppError.create('User not found', 404);
+            }
+
+
+            const lastSyncDatex = this._parseDateValue(lastSyncDate);
+            const parsedDate = this._parseDateValue(parsedData.date) || new Date();
+            // Find or create device
+            let device = user.devices.find(d => d.name === deviceName);
+
+            if (!device) {
+                device = {
+                    name: deviceName,
+                    lastSyncDate: lastSyncDatex,
+                    messages: []
+                };
+                user.devices.push(device);
+                await user.save();
+            }
+
+            const messageObj = {
+                sender: sender,
+                amount: parsedData.amount,
+                date: parsedDate,
+                type: parsedData.type,
+                createdBy: userId,
+                userRole: userRole
+
+            };
+
+            (device.messages).forEach(m => {
+                if (m.sender === messageObj.sender 
+                    && m.amount === messageObj.amount 
+                    && m.date.getTime() === messageObj.date.getTime() 
+                    && m.type === messageObj.type 
+                    && m.createdBy.toString() === messageObj.createdBy.toString() 
+                    && m.userRole === messageObj.userRole) {
+                    throw AppError.create('Duplicate message found', 409);
+                }
+                
+            });
+
+            /* device.messages.push(messageObj);
+            await user.save(); */
+
+            await User.updateOne(
+                { _id: userId, 'devices.name': deviceName },
+                { $push: { 'devices.$.messages': messageObj } }
+            );
+
+                return {
+                    ...messageObj,
+                    createdAt: new Date()
+                };
+
+        } catch (error) {
+            throw error instanceof AppError
+                ? error
+                : AppError.create('Failed to save message to device: ' + error.message, 500);
+        }
+    }
+
+ /*    async saveMessageToDevice(userId, deviceName, parsedData, sender, lastSyncDate, userRole) {
         try {
             if (!userId || !deviceName) {
                 throw AppError.create('UserId and Devicename are required', 400);
@@ -348,7 +419,26 @@ class MessageService {
                 device.messages = [];
             }
 
-            device.messages.push(messageObj);
+            const exists = await User.findOne({
+                _id: userId,
+                'devices.name': deviceName,
+                'devices.messages': {
+                    $elemMatch: {
+                        sender: messageObj.sender,
+                        amount: messageObj.amount,
+                        date: messageObj.date,
+                        type: messageObj.type,
+                        createdBy: messageObj.createdBy,
+                        userRole: messageObj.userRole
+                    }
+                }
+            });
+
+            if (!exists) {
+                device.messages.push(messageObj);
+            } else {
+                throw new Error('Duplicate message found', 500);
+            }
 
             const updatedUser = await User.findByIdAndUpdate(
                 userId,
@@ -363,6 +453,7 @@ class MessageService {
                     runValidators: true
                 }
             );
+
             //  console.log('User saved successfully with $push operator using arrayFilters');
 
             // Return the message object we saved (values are valid)
@@ -386,7 +477,7 @@ class MessageService {
                 : AppError.create('Failed to save message to device: ' + error.message, 500);
         }
     }
-
+ */
     async getUserDevices(userId) {
         try {
             if (!userId) {
@@ -434,9 +525,9 @@ class MessageService {
                     amount: m.amount,
                     date: m.date,
                     type: m.type,
-                   // createdBy: m.createdBy,
-                   //userRole: m.userRole,
-                  //  _id: m._id
+                    // createdBy: m.createdBy,
+                    //userRole: m.userRole,
+                    //  _id: m._id
                 }))
                 : [];
 
@@ -586,15 +677,6 @@ class MessageService {
         }
     }
 
-    async addMessageManually(data, userId) {
-        try {
-            const { sender, amount, date, type, userRole } = data;
-        }catch (error) {
-            throw error instanceof AppError
-                ? error
-                : AppError.create('Failed to add message manually: ' + error.message, 500);
-        }}
-
     async getTransactionsWithFilters(userId, filters = {}) {
         try {
             //{device, from, to, sender, amount, type}
@@ -637,6 +719,24 @@ class MessageService {
             };
         } catch (error) {
             throw AppError.create('Failed to fetch transactions and filters: ' + error.message, 500);
+        }
+    }
+
+    async deleteDevice(userId, deviceName) {
+        try {
+            if (!userId || !deviceName) {
+                throw AppError.create('UserId and DeviceName are required', 400);
+            }
+
+            const result = await User.updateOne(
+                { _id: userId },
+                { $pull: { devices: { name: deviceName } } }
+            );
+            return result.modifiedCount > 0;
+        } catch (error) {
+            throw error instanceof AppError
+                ? error
+                : AppError.create('Failed to delete device: ' + error.message, 500);
         }
     }
 
