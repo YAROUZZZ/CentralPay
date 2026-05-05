@@ -527,9 +527,6 @@ class MessageService {
                     amount: m.amount,
                     date: m.date,
                     type: m.type,
-                    // createdBy: m.createdBy,
-                    //userRole: m.userRole,
-                    //  _id: m._id
                 }))
                 : [];
 

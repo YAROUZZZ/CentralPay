@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 
 const messageController = require('../controllers/messageController');
-const transactionController = require('../controllers/transactionController');
 const authenticate = require('../middleware/auth');
 const allowRoles = require('../middleware/allowedTo');
 
@@ -13,10 +12,6 @@ router.post('/parse', authenticate, (req, res, next) => {
 
 router.post('/addManually', authenticate, (req, res, next) => {
     messageController.addManually(req, res).catch(next);
-});
-
-router.post('/app/addManually', authenticate, allowRoles(['normal']), (req, res, next) => {
-    transactionController.addAppManually(req, res).catch(next);
 });
 
 router.get('/recents', authenticate, (req, res, next) => {

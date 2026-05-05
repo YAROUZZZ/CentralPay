@@ -66,12 +66,12 @@ formData.append(
       success: true,
       extracted_data: response.data.data
     });
-
+/* 
     // Create a new transaction with the extracted data
     const { date, total, category, date_epoch_ms } = response.data.data;
     const userId = req.currentUser?.userId;
     const userRole = req.currentUser?.role;
-    await createTransaction(total, true, category, date_epoch_ms, userId, userRole);
+    await createTransaction(total, true, category, date_epoch_ms, userId, userRole); */
 
   } catch (error) {
     console.error(error);

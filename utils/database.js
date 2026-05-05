@@ -7,6 +7,7 @@ const User = require('../modules/User');
 const UnverifiedUser = require('../modules/UnverifiedUser');
 const UserVerification = require('../modules/UserVerification');
 const Message = require('../modules/message');
+const transaction = require('../modules/Transaction');
 const { generateUserToken } = require('./jwt');
 
 // Helper to get the correct model based on role

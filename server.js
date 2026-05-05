@@ -60,6 +60,9 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+const transactionRouter = require('./routes/transaction.routes.js');
+app.use('/transaction', transactionRouter);
+
 
 // Error handling middleware
 app.use(errorHandler);
