@@ -478,6 +478,8 @@ class MessageService {
         }
     }
  */
+    
+    
     async getUserDevices(userId) {
         try {
             if (!userId) {

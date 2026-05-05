@@ -5,20 +5,25 @@ const transactionService = require('../services/transactionService');
 
 
 class transactionController {
-    constructor(transactionService) {
-        this.transactionService = transactionService;
-    }
+    
 
     async addAppManually(req, res, next) {
         try {
 
             const userId = req.currentUser?.userId;
             const userRole = req.currentUser?.role;
-            const { amount, expense, category, date } = req.body;
+            const { transactions } = req.body;
             if (!userId) throw AppError.create('Unauthorized', 401);
 
-            const transaction = await transactionService.createTransaction(amount, expense, category, date, userId, userRole);
-            return sendSuccess(res, 201, 'Transaction added successfully',  transaction);
+            if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
+                throw AppError.create(
+                    'Please provide "Transactions" array with transaction objects',
+                    400
+                );
+            }
+
+            const result = await transactionService.createListOfTransactions(transactions, userId, userRole);
+            return sendSuccess(res, 201, `${result.successful} Transactions added successfully`, result.fails);
         } catch (error) {
             throw error instanceof AppError
                 ? error
