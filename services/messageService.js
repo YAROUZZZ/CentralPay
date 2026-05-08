@@ -707,6 +707,15 @@ class MessageService {
 
 
             const messages = await this.getFilteredMessages(userId, filters);
+            let sentCount = 0;
+            let receivedCount = 0;
+            messages.forEach(m => {
+                if (m.type === 'sent') {
+                    sentCount += m.amount;  
+                } else if (m.type === 'received') {
+                    receivedCount += m.amount;
+                }});
+            let total = receivedCount + sentCount;
 
             return {
                 filters: {
@@ -714,7 +723,12 @@ class MessageService {
                     sender: availableSenders,
                     // types: ['sent', 'received'],
                 },
-                messages: messages
+                transactions: messages.length,
+                sentCount,
+                receivedCount,
+                total,
+                messages: messages,
+                
             };
         } catch (error) {
             throw AppError.create('Failed to fetch transactions and filters: ' + error.message, 500);
