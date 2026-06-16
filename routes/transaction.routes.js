@@ -6,7 +6,7 @@ const authenticate = require('../middleware/auth');
 const allowRoles = require('../middleware/allowedTo');
 
 
-router.post('/app/addManually', authenticate, allowRoles(['normal']), (req, res, next) => {
+router.post('/app/addManually', authenticate, (req, res, next) => {
     transactionController.addAppManually(req, res).catch(next);
 });
 
