@@ -166,11 +166,19 @@ class messageController {
     async getFilters(req, res, next) {
         try {
             const userId = req.currentUser?.userId;
-            const {device, from, to, sender, amount, type} = req.body;
-            const filterssss = {device, from, to, sender, amount, type};
+            const { device, from, to, sender, amount, type } = req.query;
+            const parsedAmount = amount ? Number(amount) : undefined;
+            const filters = {
+                device,
+                from,
+                to,
+                sender,
+                amount: isNaN(parsedAmount) ? amount : parsedAmount,
+                type
+            };
             if (!userId) throw AppError.create('Unauthorized', 401);
-            const filters = await messageService.getTransactionsWithFilters(userId, filterssss);
-            return sendSuccess(res, 200, 'User filters fetched', filters );
+            const filtersResult = await messageService.getTransactionsWithFilters(userId, filters);
+            return sendSuccess(res, 200, 'User filters fetched', filtersResult );
         } catch (error) {
              throw error instanceof AppError 
                 ? error 
