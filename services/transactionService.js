@@ -68,7 +68,7 @@ class TransactionService {
 
             const sur = await Transaction.findOne(qur);
             if (sur) {
-                throw AppError.create('Duplicate transaction', 400);
+                throw AppError.create('Duplicate transaction', 409);
             }
         
             const trans = new Transaction({
