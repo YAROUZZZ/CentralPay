@@ -1,8 +1,9 @@
 const messageService = require('../services/messageService');
 const { sendSuccess, sendError } = require('../utils/response');
 const AppError = require('../utils/appError');
-const {validateRequiredFields, sanitizeInput } = require('../utils/validation');
+const { validateRequiredFields, sanitizeInput } = require('../utils/validation');
 const { findUserById } = require('../utils/database');
+const fs = require('fs');
 
 
 class messageController {
@@ -38,8 +39,8 @@ class messageController {
                 }
             });
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Error processing batch messages: ' + error.message, 500);
         }
     }
@@ -53,40 +54,41 @@ class messageController {
             const messages = await messageService.getMessagesByUser(userId, userRole, limit);
             return sendSuccess(res, 200, 'User messages fetched', { data: messages });
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Error fetching recent transactions: ' + error.message, 500);
         }
     }
 
     async addManually(req, res, next) {
         try {
-            const userId = req.currentUser?.userId; 
+            const userId = req.currentUser?.userId;
             const userRole = req.currentUser?.role;
             const { device, amount, type, date } = req.body;
             if (!userId) throw AppError.create('Unauthorized', 401);
-            SanatizedData ={
-            device: sanitizeInput(device),
-            amount: sanitizeInput(amount),
-            date: sanitizeInput(date),
-            type: sanitizeInput(type),
-            userRole,
-            createdBy: findUserById(userId),
-            createdAt: new Date(now())
+            SanatizedData = {
+                device: sanitizeInput(device),
+                amount: sanitizeInput(amount),
+                date: sanitizeInput(date),
+                type: sanitizeInput(type),
+                userRole,
+                createdBy: findUserById(userId),
+                createdAt: new Date(now())
             }
 
             const data = validateRequiredFields(SanatizedData, ['device', 'amount', 'date', 'type']);
-            
+
             const result = await messageService.addMessageManually(
                 data,
                 userId
             );
             return sendSuccess(res, 201, 'Message added successfully', { data: result });
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Error adding message manually: ' + error.message, 500);
-        }}
+        }
+    }
 
     async addAppManually(req, res, next) {
         try {
@@ -94,58 +96,61 @@ class messageController {
             const userRole = req.currentUser?.role;
             const { amount, expense, category, date } = req.body;
             if (!userId) throw AppError.create('Unauthorized', 401);
-            
+
             const result = await messageService.addAppMessageManually(amount, expense, category, date, userId, userRole);
             return sendSuccess(res, 201, 'App message added successfully', { data: result });
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Error adding app message manually: ' + error.message, 500);
-        }}
-
-   /*  async getMonthlyTransactions(req, res, next) {
-        try {
-            const userId = req.currentUser?.userId;
-            const userRole = req.currentUser?.role;
-            const { month, year } = req.body;
-            if (!userId) throw AppError.create('Unauthorized', 401);    
-            if (!month || isNaN(month) || month < 1 || month > 12) {
-                throw AppError.create('Invalid month. Please provide a value between 1 and 12.', 400);
-            }
-            const messages = await messageService.getMessagesByUserAndMonth(userId, userRole, parseInt(month), parseInt(year));
-            return sendSuccess(res, 200, 'Monthly transactions fetched', { data: messages });
-        } catch (error) {
-             throw error instanceof AppError 
-                ? error 
-                : AppError.create('Error fetching monthly transactions: ' + error.message, 500);
         }
-    } */
+    }
+
+    /*  async getMonthlyTransactions(req, res, next) {
+         try {
+             const userId = req.currentUser?.userId;
+             const userRole = req.currentUser?.role;
+             const { month, year } = req.body;
+             if (!userId) throw AppError.create('Unauthorized', 401);    
+             if (!month || isNaN(month) || month < 1 || month > 12) {
+                 throw AppError.create('Invalid month. Please provide a value between 1 and 12.', 400);
+             }
+             const messages = await messageService.getMessagesByUserAndMonth(userId, userRole, parseInt(month), parseInt(year));
+             return sendSuccess(res, 200, 'Monthly transactions fetched', { data: messages });
+         } catch (error) {
+              throw error instanceof AppError 
+                 ? error 
+                 : AppError.create('Error fetching monthly transactions: ' + error.message, 500);
+         }
+     } */
 
     async getTopAndLeastSenders(req, res, next) {
         try {
             const userId = req.currentUser?.userId;
             const userRole = req.currentUser?.role;
             if (!userId) throw AppError.create('Unauthorized', 401);
-            
+
             const senderStats = await messageService.getTopAndLeastSenders(userId, userRole);
             return sendSuccess(res, 200, 'Sender statistics fetched', senderStats);
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
-                : AppError.create('Error fetching sender statistics: ' + error.message, 500);}
+            throw error instanceof AppError
+                ? error
+                : AppError.create('Error fetching sender statistics: ' + error.message, 500);
+        }
     }
 
     async getUserDevices(req, res, next) {
         try {
             const userId = req.currentUser?.userId;
             if (!userId) throw AppError.create('Unauthorized', 401);
-            
+
             const devices = await messageService.getUserDevices(userId);
             return sendSuccess(res, 200, 'User devices fetched', { devices: devices.devices });
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
-                : AppError.create('Error fetching user devices: ' + error.message, 500);}
+            throw error instanceof AppError
+                ? error
+                : AppError.create('Error fetching user devices: ' + error.message, 500);
+        }
     }
 
     async getDeviceMessages(req, res, next) {
@@ -153,13 +158,14 @@ class messageController {
             const userId = req.currentUser?.userId;
             const { deviceName } = req.params;
             if (!userId) throw AppError.create('Unauthorized', 401);
-            
+
             const device = await messageService.getDeviceMessages(userId, deviceName);
             return sendSuccess(res, 200, 'Device messages fetched', device);
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
-                : AppError.create('Error fetching device messages: ' + error.message, 500);}
+            throw error instanceof AppError
+                ? error
+                : AppError.create('Error fetching device messages: ' + error.message, 500);
+        }
     }
 
 
@@ -178,14 +184,14 @@ class messageController {
             };
             if (!userId) throw AppError.create('Unauthorized', 401);
             const filtersResult = await messageService.getTransactionsWithFilters(userId, filters);
-            return sendSuccess(res, 200, 'User filters fetched', filtersResult );
+            return sendSuccess(res, 200, 'User filters fetched', filtersResult);
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Error fetching filters: ' + error.message, 500);
         }
     }
-    
+
 
     async deleteDevice(req, res, next) {
         try {
@@ -198,10 +204,36 @@ class messageController {
             }
             return sendSuccess(res, 200, 'Device deleted successfully');
         } catch (error) {
-             throw error instanceof AppError 
-                ? error 
+            throw error instanceof AppError
+                ? error
                 : AppError.create('Error deleting device: ' + error.message, 500);
-        }}
+        }
+    }
+
+    async generateExcelSheet(req, res, next) {
+        try {
+            const userId = req.currentUser?.userId;
+            const filters = req.query;
+            if (!userId) throw AppError.create('Unauthorized', 401);
+            const excelFilePath = await messageService.generateExcelSheet(userId, filters);
+
+            res.setHeader(
+                'Content-Type',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            );
+            res.setHeader(
+                'Content-Disposition',
+                'attachment; filename=transactions.xlsx'
+            );
+            res.send(excelFilePath);
+
+           // return sendSuccess(res, 200, 'Excel sheet generated successfully', { filePath: excelFilePath });
+        } catch (error) {
+            throw error instanceof AppError
+                ? error
+                : AppError.create('Error generating Excel sheet: ' + error.message, 500);
+        }
+    }
 
 }
 module.exports = new messageController();

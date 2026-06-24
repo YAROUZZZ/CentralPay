@@ -4,6 +4,7 @@ const AppError = require('../utils/appError');
 const mongoose = require('mongoose');
 const { validateRequiredFields, sanitizeInput } = require('../utils/validation');
 const { deleteDevice } = require('../controllers/messageController');
+const ExcelJS = require('exceljs');
 
 
 class MessageService {
@@ -777,7 +778,41 @@ class MessageService {
                         : AppError.create('Failed to delete device: ' + error.message, 500);
                 }
             }
+    
+    async generateExcelSheet(userId, filters = {}) {
+        try {
+            const transactionsData = await this.getTransactionsWithFilters(userId, filters);
+            const messages = transactionsData.messages;
 
-        }
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Transactions');
+
+            worksheet.columns = [
+                { header: 'Sender', key: 'sender', width: 30 },
+                { header: 'Amount', key: 'amount', width: 15 },
+                { header: 'Date', key: 'date', width: 20 },
+                { header: 'Type', key: 'type', width: 15 },
+                { header: 'Device', key: 'device', width: 30 }
+            ];
+
+            messages.forEach(msg => {
+                worksheet.addRow({
+                    sender: msg.sender,
+                    amount: msg.amount,
+                    date: msg.date,
+                    type: msg.type,
+                    device: msg.device
+                });
+            });
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            return buffer;
+
+        }catch (error) {
+            throw error instanceof AppError
+                ? error
+                : AppError.create('Failed to generate Excel sheet: ' + error.message, 500);
+        }}
+    }
 
 module.exports = new MessageService();

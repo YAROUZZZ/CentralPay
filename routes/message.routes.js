@@ -38,4 +38,8 @@ router.delete('/deleteDevice', authenticate, (req, res, next) => {
     messageController.deleteDevice(req, res).catch(next)
 });
 
+router.get('/excelSheet', authenticate, (req, res, next) => {
+    messageController.generateExcelSheet(req, res).catch(next);
+});
+
 module.exports = router;
